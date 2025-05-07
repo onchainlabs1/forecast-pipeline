@@ -1,5 +1,5 @@
 """
-Módulo para autenticação e autorização com JWT.
+Module for authentication and authorization with JWT.
 """
 
 import os
@@ -12,12 +12,12 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
 
-# Configurações de segurança
+# Security settings
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-for-dev-only")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# Modelos Pydantic
+# Pydantic models
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -36,29 +36,29 @@ class User(BaseModel):
 class UserInDB(User):
     hashed_password: str
 
-# Contexto para hash de senhas
+# Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# OAuth2 com Bearer token
+# OAuth2 with Bearer token
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="token",
     scopes={
-        "predictions:read": "Ler previsões",
-        "predictions:write": "Criar previsões",
-        "admin": "Acesso de administrador"
+        "predictions:read": "Read predictions",
+        "predictions:write": "Create predictions",
+        "admin": "Admin access"
     }
 )
 
-# Funções de utilitário para autenticação
+# Utility functions for authentication
 def verify_password(plain_password, hashed_password):
-    """Verifica se a senha fornecida corresponde ao hash armazenado."""
+    """Verifies if the provided password matches the stored hash."""
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
-    """Gera um hash para a senha fornecida."""
+    """Generates a hash for the provided password."""
     return pwd_context.hash(password)
 
-# Banco de dados simulado de usuários - em produção, use um banco de dados real
+# Simulated user database - in production, use a real database
 fake_users_db = {
     "johndoe": {
         "username": "johndoe",
@@ -79,13 +79,13 @@ fake_users_db = {
 }
 
 def get_user(db, username: str):
-    """Recupera um usuário do banco de dados."""
+    """Retrieves a user from the database."""
     if username in db:
         user_dict = db[username]
         return UserInDB(**user_dict)
 
 def authenticate_user(db, username: str, password: str):
-    """Autentica um usuário pelo username e senha."""
+    """Authenticates a user by username and password."""
     user = get_user(db, username)
     if not user:
         return False
@@ -94,7 +94,7 @@ def authenticate_user(db, username: str, password: str):
     return user
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None):
-    """Cria um token JWT de acesso."""
+    """Creates a JWT access token."""
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -104,9 +104,9 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# Dependência para rotas protegidas
+# Dependency for protected routes
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    """Valida o token JWT e retorna o usuário atual."""
+    """Validates the JWT token and returns the current user."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -127,14 +127,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return user
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
-    """Verifica se o usuário atual está ativo."""
+    """Checks if the current user is active."""
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-# Verificação de escopos (autorização)
+# Scope verification (authorization)
 def validate_scopes(required_scopes: List[str]):
-    """Cria uma dependência que verifica se o usuário tem os escopos necessários."""
+    """Creates a dependency that checks if the user has the necessary scopes."""
     async def has_scopes(current_user: User = Depends(get_current_active_user)):
         for scope in required_scopes:
             if scope not in current_user.scopes:

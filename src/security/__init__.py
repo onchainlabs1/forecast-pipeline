@@ -1,3 +1,3 @@
 """
-Módulo de segurança para o projeto de previsão de vendas.
+Security module for the sales forecast project.
 """ 

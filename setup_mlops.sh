@@ -1,59 +1,59 @@
 #!/bin/bash
 
-# Script para configurar componentes MLOps avançados no projeto
+# Script to set up advanced MLOps components in the project
 
-set -e  # Encerra script se algum comando falhar
+set -e  # Exits script if any command fails
 
-echo "Iniciando configuração de componentes MLOps avançados..."
+echo "Starting advanced MLOps components setup..."
 
-# Criar diretórios necessários
-echo "Criando diretórios..."
+# Create necessary directories
+echo "Creating directories..."
 mkdir -p data/raw data/processed models reports mlruns
 mkdir -p monitoring/grafana-dashboards monitoring/grafana-datasources
 mkdir -p airflow/dags airflow/logs airflow/plugins airflow/config
 mkdir -p feature_store
 
-# Gerar chave secreta para JWT
-echo "Gerando chave secreta para autenticação JWT..."
+# Generate secret key for JWT
+echo "Generating secret key for JWT authentication..."
 SECRET_KEY=$(openssl rand -hex 32)
 echo "SECRET_KEY=$SECRET_KEY" > .env
 
-# Gerar chave Fernet para Airflow
-echo "Gerando chave Fernet para Airflow..."
+# Generate Fernet key for Airflow
+echo "Generating Fernet key for Airflow..."
 AIRFLOW_FERNET_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 echo "AIRFLOW_FERNET_KEY=$AIRFLOW_FERNET_KEY" >> .env
 
-# Instalar dependências
-echo "Instalando dependências..."
+# Install dependencies
+echo "Installing dependencies..."
 pip install -r requirements.txt
 
-# Copiar o DAG do Airflow para o diretório correto
-echo "Configurando Airflow..."
+# Copy Airflow DAG to the correct directory
+echo "Configuring Airflow..."
 cp airflow/dags/sales_forecast_dag.py airflow/dags/
 
-# Inicializar DVC
-echo "Inicializando DVC..."
+# Initialize DVC
+echo "Initializing DVC..."
 if [ ! -d ".dvc" ]; then
     dvc init
-    echo "DVC inicializado."
+    echo "DVC initialized."
 else
-    echo "DVC já inicializado."
+    echo "DVC already initialized."
 fi
 
-# Configurar MLflow
-echo "Configurando MLflow..."
+# Configure MLflow
+echo "Configuring MLflow..."
 if [ ! -d "mlruns" ]; then
     mlflow ui --backend-store-uri ./mlruns &
     PID=$!
     sleep 5
     kill $PID
-    echo "MLflow inicializado."
+    echo "MLflow initialized."
 else
-    echo "MLflow já inicializado."
+    echo "MLflow already initialized."
 fi
 
-# Criar arquivo de configuração do Prometheus
-echo "Configurando Prometheus..."
+# Create Prometheus configuration file
+echo "Configuring Prometheus..."
 cat > monitoring/prometheus.yml << EOL
 global:
   scrape_interval: 15s
@@ -70,21 +70,21 @@ scrape_configs:
       - targets: ['api:8000']
 EOL
 
-# Dicas finais
-echo "Configuração concluída!"
+# Final tips
+echo "Setup completed!"
 echo
-echo "Para iniciar o ambiente completo, execute:"
+echo "To start the complete environment, run:"
 echo "  docker-compose -f docker-compose.advanced.yml up -d"
 echo
-echo "Para executar apenas a API, execute:"
+echo "To run only the API, execute:"
 echo "  python src/api/main.py"
 echo
-echo "Para acessar o Airflow, abra:"
-echo "  http://localhost:8080 (usuário: airflow, senha: airflow)"
+echo "To access Airflow, open:"
+echo "  http://localhost:8080 (user: airflow, password: airflow)"
 echo
-echo "Para acessar o MLflow, abra:"
+echo "To access MLflow, open:"
 echo "  http://localhost:5000"
 echo
-echo "Antes de fazer requisições à API, obtenha um token JWT com:"
+echo "Before making API requests, get a JWT token with:"
 echo "  curl -X POST http://localhost:8000/token -d 'username=admin&password=admin&scope=predictions:read'"
 echo 

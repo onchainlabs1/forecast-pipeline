@@ -1,19 +1,19 @@
 #!/bin/bash
 
-# Script simplificado para executar o pipeline
+# Simplified script to run the pipeline
 
-echo "Iniciando pipeline simplificado..."
+echo "Starting simplified pipeline..."
 
-# 1. Instalar dependências necessárias
-echo "Instalando dependências..."
+# 1. Install necessary dependencies
+echo "Installing dependencies..."
 pip3 install pandas numpy scikit-learn lightgbm matplotlib seaborn prophet statsmodels jupyter mlflow 
 
-# 2. Pré-processamento dos dados
-echo "Pré-processando dados..."
+# 2. Data preprocessing
+echo "Preprocessing data..."
 python3 src/data/preprocess.py
 
-# 3. Treinamento do modelo
-echo "Treinando modelo..."
+# 3. Model training
+echo "Training model..."
 python3 src/train_model.py
 
-echo "Pipeline completo!" 
+echo "Pipeline complete!" 

@@ -1,6 +1,6 @@
 """
-DAG para orquestrar o pipeline completo de previsão de vendas.
-Este DAG executa todo o fluxo de trabalho do projeto, desde a ingestão de dados até o deploy do modelo.
+DAG to orchestrate the complete sales forecast pipeline.
+This DAG executes the entire project workflow, from data ingestion to model deployment.
 """
 
 from datetime import datetime, timedelta
@@ -13,23 +13,23 @@ import os
 import sys
 import logging
 
-# Adicione o diretório do projeto ao sys.path
+# Add project directory to sys.path
 project_dir = Variable.get("MLPROJECT_DIR", default_var="/app")
 sys.path.append(project_dir)
 
-# Importar módulos do projeto
+# Import project modules
 from src.data.load_data import main as load_data
 from src.data.preprocess import main as preprocess_data
 from src.training_pipeline import AdvancedTrainingPipeline
 
-# Configurar logging
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# Configuração padrão para o DAG
+# Default configuration for the DAG
 default_args = {
     'owner': 'mlops',
     'depends_on_past': False,
@@ -41,53 +41,53 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-# Função para carregar dados
+# Function to load data
 def load_data_task():
-    logger.info("Iniciando carregamento de dados")
+    logger.info("Starting data loading")
     load_data()
-    return "Dados carregados com sucesso"
+    return "Data loaded successfully"
 
-# Função para pré-processar dados
+# Function to preprocess data
 def preprocess_data_task():
-    logger.info("Iniciando pré-processamento de dados")
+    logger.info("Starting data preprocessing")
     preprocess_data()
-    return "Dados pré-processados com sucesso"
+    return "Data preprocessed successfully"
 
-# Função para treinar modelo
+# Function to train the model
 def train_model_task():
-    logger.info("Iniciando treinamento do modelo")
+    logger.info("Starting model training")
     pipeline = AdvancedTrainingPipeline()
     pipeline.run_pipeline()
-    return "Modelo treinado com sucesso"
+    return "Model trained successfully"
 
-# Função para avaliar drift e performance
+# Function to evaluate drift and performance
 def evaluate_drift_task():
-    logger.info("Avaliando drift do modelo")
+    logger.info("Evaluating model drift")
     pipeline = AdvancedTrainingPipeline()
     model_monitor = pipeline.model_monitor
     
     needs_retraining, reason = model_monitor.needs_retraining()
     if needs_retraining:
-        logger.warning(f"Modelo precisa de retreinamento: {reason}")
+        logger.warning(f"Model needs retraining: {reason}")
         return "drift_detected"
     else:
-        logger.info("Modelo estável, não requer retreinamento")
+        logger.info("Model stable, no retraining required")
         return "model_stable"
 
-# Função para enviar relatório por email
+# Function to send report by email
 def send_report_email(**context):
     ti = context['ti']
     training_result = ti.xcom_pull(task_ids='train_model')
     drift_result = ti.xcom_pull(task_ids='evaluate_drift')
     
-    subject = "Relatório de Pipeline de Previsão de Vendas"
+    subject = "Sales Forecast Pipeline Report"
     body = f"""
-    Pipeline de Previsão de Vendas completado com sucesso.
+    Sales Forecast Pipeline completed successfully.
     
-    Resultado do treinamento: {training_result}
-    Avaliação de drift: {drift_result}
+    Training result: {training_result}
+    Drift evaluation: {drift_result}
     
-    Para mais detalhes, acesse o MLflow UI.
+    For more details, access the MLflow UI.
     """
     
     send_email(
@@ -96,54 +96,54 @@ def send_report_email(**context):
         html_content=body
     )
     
-    return "Email enviado com sucesso"
+    return "Email sent successfully"
 
-# Definição do DAG
+# DAG definition
 with DAG(
     'sales_forecast_pipeline',
     default_args=default_args,
-    description='Pipeline de previsão de vendas com MLOps',
-    schedule_interval='0 1 * * 1',  # Toda segunda-feira à 1:00 AM
+    description='Sales forecast pipeline with MLOps',
+    schedule_interval='0 1 * * 1',  # Every Monday at 1:00 AM
     catchup=False,
     tags=['mlops', 'forecast', 'sales'],
 ) as dag:
     
-    # Task para carregar dados
+    # Task to load data
     load_data_task = PythonOperator(
         task_id='load_data',
         python_callable=load_data_task,
     )
     
-    # Task para pré-processar dados
+    # Task to preprocess data
     preprocess_data_task = PythonOperator(
         task_id='preprocess_data',
         python_callable=preprocess_data_task,
     )
     
-    # Task para treinar modelo
+    # Task to train model
     train_model_task = PythonOperator(
         task_id='train_model',
         python_callable=train_model_task,
     )
     
-    # Task para avaliar drift
+    # Task to evaluate drift
     evaluate_drift_task = PythonOperator(
         task_id='evaluate_drift',
         python_callable=evaluate_drift_task,
     )
     
-    # Task para iniciar a API
+    # Task to start the API
     deploy_api_task = BashOperator(
         task_id='deploy_api',
         bash_command='cd {{ var.value.MLPROJECT_DIR }} && python src/api/main.py > api.log 2>&1 &',
     )
     
-    # Task para enviar relatório por email
+    # Task to send report by email
     send_report_task = PythonOperator(
         task_id='send_report',
         python_callable=send_report_email,
         provide_context=True,
     )
     
-    # Definir dependências entre as tasks
+    # Define dependencies between tasks
     load_data_task >> preprocess_data_task >> train_model_task >> evaluate_drift_task >> deploy_api_task >> send_report_task 

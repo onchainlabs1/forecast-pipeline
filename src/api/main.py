@@ -99,7 +99,7 @@ class PredictionResponse(BaseModel):
     prediction_time: str
 
 
-# Endpoint para autenticação
+# Authentication endpoint
 @app.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
@@ -110,7 +110,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Criar um token de acesso com os escopos do usuário (interseção entre os solicitados e os atribuídos)
+    # Create an access token with the user's scopes (intersection between requested and assigned)
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     scopes = [scope for scope in form_data.scopes if scope in user.scopes]
     
@@ -372,14 +372,14 @@ async def explain_prediction(
     current_user: User = Security(validate_scopes(["predictions:read"]))
 ):
     """
-    Explicação para uma previsão específica usando SHAP.
+    Explanation for a specific prediction using SHAP.
     
-    Este endpoint gera uma explicação detalhada para uma previsão específica,
-    mostrando a contribuição de cada feature para o resultado final.
+    This endpoint generates a detailed explanation for a specific prediction,
+    showing the contribution of each feature to the final result.
     """
     global model
     
-    # Se o modelo não estiver carregado, tenta carregá-lo
+    # If the model is not loaded, try to load it
     if model is None:
         try:
             model = load_model()
@@ -390,7 +390,7 @@ async def explain_prediction(
             )
     
     try:
-        # Criar StoreItem a partir dos parâmetros
+        # Create a StoreItem from the parameters
         item = StoreItem(
             store_nbr=store_nbr,
             family=family,
@@ -398,19 +398,19 @@ async def explain_prediction(
             date=date
         )
         
-        # Preparar features
+        # Prepare features
         features_df = prepare_features([item])
         
-        # Inicializar o explicador de modelos
+        # Initialize the model explainer
         explainer = ModelExplainer(model=model)
         
-        # Criar o explicador
+        # Create the explainer
         explainer.create_explainer()
         
-        # Gerar explicação
+        # Generate explanation
         explanation = explainer.explain_prediction(features_df.iloc[0])
         
-        # Adicionar metadados
+        # Add metadata
         explanation["prediction_id"] = prediction_id
         explanation["item"] = {
             "store_nbr": store_nbr,
