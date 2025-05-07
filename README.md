@@ -25,6 +25,11 @@ Develop a complete sales forecasting pipeline with time series for multiple stor
   - GitHub Actions (CI/CD for tests and deployment)
   - Feature Store (metadata management + feature versioning)
   - Model Monitoring (drift detection + automated retraining)
+  - Apache Airflow (workflow orchestration)
+  - SHAP (model explainability)
+  - JWT Authentication (API security)
+  - Sentry (error monitoring)
+  - Great Expectations (data validation)
 
 ## Advanced MLOps Features
 
@@ -43,11 +48,32 @@ Develop a complete sales forecasting pipeline with time series for multiple stor
 - Automated recommendation for retraining
 
 ### Automated Training Pipeline
-- End-to-end training pipeline with proper workflow
+- End-to-end training pipeline with Apache Airflow
 - Integration with Feature Store and Model Monitoring
 - Experiment tracking with MLflow
 - Model registry integration
 - Continuous evaluation and deployment
+
+### Model Explainability
+- SHAP values for feature importance
+- Local and global model explanations
+- Interactive visualizations for feature contributions
+- API endpoint for explaining individual predictions
+- Customizable explanation reports
+
+### Security
+- JWT-based authentication
+- Role-based access control
+- Scoped permissions for API endpoints
+- Secure password hashing
+- Environment-specific configuration
+
+### Observability
+- Comprehensive error tracking with Sentry
+- Detailed logging and monitoring
+- Health check endpoints
+- Prometheus metrics integration
+- Grafana dashboards
 
 ## Project Structure
 

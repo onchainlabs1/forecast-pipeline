@@ -17,4 +17,12 @@ black>=22.1.0
 isort>=5.10.0
 python-dotenv>=0.20.0
 tsfeatures>=0.1.0
-joblib>=1.1.0 
+joblib>=1.1.0
+
+# Adicionando componentes de MLOps mais avançados
+apache-airflow>=2.7.0
+great-expectations>=0.17.0
+shap>=0.43.0
+python-jose[cryptography]>=3.3.0  # Para JWT
+passlib[bcrypt]>=1.7.4  # Para segurança
+sentry-sdk>=1.30.0  # Para monitoramento de erros 

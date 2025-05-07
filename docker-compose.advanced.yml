@@ -16,6 +16,8 @@ services:
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - SECRET_KEY=${SECRET_KEY:-default_dev_key_never_use_in_production}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -77,6 +79,7 @@ services:
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - SENTRY_DSN=${SENTRY_DSN:-}
     restart: unless-stopped
     networks:
       - mlops-network
@@ -99,6 +102,7 @@ services:
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - SENTRY_DSN=${SENTRY_DSN:-}
     networks:
       - mlops-network
     depends_on:
@@ -121,6 +125,83 @@ services:
       - mlops-network
     depends_on:
       - mlflow
+
+  # Airflow Webserver
+  airflow-webserver:
+    image: apache/airflow:2.7.3
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/config:/opt/airflow/config
+      - .:/app
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY:-}
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
+      - AIRFLOW__WEBSERVER__RBAC=True
+      - AIRFLOW_CONN_MLFLOW_DEFAULT=http://mlflow:5000
+      - MLPROJECT_DIR=/app
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    networks:
+      - mlops-network
+
+  # Airflow Scheduler
+  airflow-scheduler:
+    image: apache/airflow:2.7.3
+    depends_on:
+      - postgres
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/config:/opt/airflow/config
+      - .:/app
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY:-}
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW_CONN_MLFLOW_DEFAULT=http://mlflow:5000
+      - MLPROJECT_DIR=/app
+    command: scheduler
+    restart: always
+    networks:
+      - mlops-network
+
+  # Postgres for Airflow and data storage
+  postgres:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    restart: always
+    networks:
+      - mlops-network
 
   # Monitoring dashboard
   grafana:
@@ -157,4 +238,5 @@ networks:
 volumes:
   minio-data:
   grafana-data:
-  prometheus-data: 
+  prometheus-data:
+  postgres-data: 

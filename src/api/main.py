@@ -10,15 +10,17 @@ import sys
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import numpy as np
 import joblib
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends, Security, status
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
 import mlflow
 import uvicorn
+import sentry_sdk
 
 # Add project root to sys.path
 project_root = Path(__file__).parents[2]
@@ -26,6 +28,12 @@ sys.path.insert(0, str(project_root))
 
 # Import utilities
 from src.utils.mlflow_utils import setup_mlflow
+from src.security.auth import (
+    Token, User, authenticate_user, create_access_token, 
+    get_current_active_user, validate_scopes, fake_users_db,
+    ACCESS_TOKEN_EXPIRE_MINUTES
+)
+from src.models.explanation import ModelExplainer
 
 # Set up logging
 logging.basicConfig(
@@ -38,6 +46,16 @@ logger = logging.getLogger(__name__)
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 MODELS_DIR = PROJECT_DIR / "models"
 MODEL_PATH = MODELS_DIR / "lightgbm_model.pkl"
+
+# Set up Sentry for error monitoring (opcional)
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,  # Ajuste conforme necessário
+        environment=os.getenv("ENVIRONMENT", "development"),
+    )
+    logger.info("Sentry initialized for error monitoring")
 
 # FastAPI app
 app = FastAPI(
@@ -79,6 +97,29 @@ class PredictionResponse(BaseModel):
     predictions: List[PredictionItem]
     model_version: str
     prediction_time: str
+
+
+# Endpoint para autenticação
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Criar um token de acesso com os escopos do usuário (interseção entre os solicitados e os atribuídos)
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    scopes = [scope for scope in form_data.scopes if scope in user.scopes]
+    
+    access_token = create_access_token(
+        data={"sub": user.username, "scopes": scopes},
+        expires_delta=access_token_expires,
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 # Model loading
@@ -198,54 +239,64 @@ async def startup_event():
 
 @app.get("/")
 async def root():
-    """Root endpoint with API information."""
+    """
+    Root endpoint that provides basic information about the API.
+    """
     return {
         "message": "Store Sales Forecasting API",
-        "version": "1.0.0",
         "docs_url": "/docs",
+        "version": "1.0.0"
     }
 
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """
+    Health check endpoint for monitoring systems.
+    """
     global model
     
+    # If model is not loaded, try to load it
     if model is None:
         try:
             model = load_model()
-            return {"status": "healthy", "model_loaded": True}
         except Exception as e:
-            return {"status": "unhealthy", "model_loaded": False, "error": str(e)}
+            return {
+                "status": "error",
+                "message": f"Model is not loaded: {str(e)}",
+                "timestamp": datetime.now().isoformat()
+            }
     
-    return {"status": "healthy", "model_loaded": True}
+    return {
+        "status": "healthy",
+        "model_loaded": model is not None,
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @app.post("/predict", response_model=PredictionResponse)
-async def predict(request: PredictionRequest):
+async def predict(
+    request: PredictionRequest,
+    current_user: User = Security(validate_scopes(["predictions:read"]))
+):
     """
-    Predict sales for a list of store items.
+    Batch prediction endpoint.
     
     Parameters
     ----------
     request : PredictionRequest
-        Request containing list of items to predict sales for.
-        
-    Returns
-    -------
-    PredictionResponse
-        Response containing sales predictions.
+        Request with a list of items to predict sales for.
     """
     global model
     
-    # Load model if not already loaded
+    # If model is not loaded, try to load it
     if model is None:
         try:
             model = load_model()
         except Exception as e:
             raise HTTPException(
-                status_code=500,
-                detail=f"Model could not be loaded: {str(e)}"
+                status_code=503,
+                detail=f"Model is not available: {str(e)}"
             )
     
     try:
@@ -255,13 +306,10 @@ async def predict(request: PredictionRequest):
         # Make predictions
         predictions = model.predict(features)
         
-        # Ensure predictions are not negative
-        predictions = np.maximum(predictions, 0)
-        
-        # Create response
-        prediction_items = []
+        # Prepare response
+        result = []
         for i, item in enumerate(request.items):
-            prediction_items.append(
+            result.append(
                 PredictionItem(
                     store_nbr=item.store_nbr,
                     family=item.family,
@@ -270,11 +318,14 @@ async def predict(request: PredictionRequest):
                 )
             )
         
-        return PredictionResponse(
-            predictions=prediction_items,
-            model_version="1.0.0",  # In production, get this from MLflow
+        # Create response
+        response = PredictionResponse(
+            predictions=result,
+            model_version=getattr(model, "version", "unknown"),
             prediction_time=datetime.now().isoformat()
         )
+        
+        return response
     
     except Exception as e:
         logger.error(f"Error making predictions: {e}")
@@ -289,59 +340,107 @@ async def predict_single(
     store_nbr: int = Query(..., description="Store number"),
     family: str = Query(..., description="Product family"),
     onpromotion: bool = Query(..., description="Whether the item is on promotion"),
-    date: str = Query(..., description="Prediction date (YYYY-MM-DD)")
+    date: str = Query(..., description="Prediction date (YYYY-MM-DD)"),
+    current_user: User = Security(validate_scopes(["predictions:read"]))
 ):
     """
-    Predict sales for a single store item using query parameters.
-    
-    Parameters
-    ----------
-    store_nbr : int
-        Store number
-    family : str
-        Product family
-    onpromotion : bool
-        Whether the item is on promotion
-    date : str
-        Prediction date (YYYY-MM-DD)
-        
-    Returns
-    -------
-    dict
-        Dictionary containing the prediction.
+    Single prediction endpoint that uses query parameters.
     """
-    # Create a request with a single item
-    request = PredictionRequest(
-        items=[
-            StoreItem(
-                store_nbr=store_nbr,
-                family=family,
-                onpromotion=onpromotion,
-                date=date
-            )
-        ]
+    # Create StoreItem from query parameters
+    item = StoreItem(
+        store_nbr=store_nbr,
+        family=family,
+        onpromotion=onpromotion,
+        date=date
     )
     
-    # Use the predict endpoint
-    response = await predict(request)
+    # Use the batch prediction endpoint
+    request = PredictionRequest(items=[item])
+    response = await predict(request, current_user)
     
-    # Return a simplified response
-    return {
-        "store_nbr": store_nbr,
-        "family": family,
-        "date": date,
-        "predicted_sales": response.predictions[0].predicted_sales,
-        "model_version": response.model_version,
-        "prediction_time": response.prediction_time
-    }
+    # Return only the first prediction
+    return response.predictions[0]
+
+
+@app.get("/explain/{prediction_id}")
+async def explain_prediction(
+    prediction_id: str,
+    store_nbr: int = Query(..., description="Store number"),
+    family: str = Query(..., description="Product family"),
+    onpromotion: bool = Query(..., description="Whether the item is on promotion"),
+    date: str = Query(..., description="Prediction date (YYYY-MM-DD)"),
+    current_user: User = Security(validate_scopes(["predictions:read"]))
+):
+    """
+    Explicação para uma previsão específica usando SHAP.
+    
+    Este endpoint gera uma explicação detalhada para uma previsão específica,
+    mostrando a contribuição de cada feature para o resultado final.
+    """
+    global model
+    
+    # Se o modelo não estiver carregado, tenta carregá-lo
+    if model is None:
+        try:
+            model = load_model()
+        except Exception as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Model is not available: {str(e)}"
+            )
+    
+    try:
+        # Criar StoreItem a partir dos parâmetros
+        item = StoreItem(
+            store_nbr=store_nbr,
+            family=family,
+            onpromotion=onpromotion,
+            date=date
+        )
+        
+        # Preparar features
+        features_df = prepare_features([item])
+        
+        # Inicializar o explicador de modelos
+        explainer = ModelExplainer(model=model)
+        
+        # Criar o explicador
+        explainer.create_explainer()
+        
+        # Gerar explicação
+        explanation = explainer.explain_prediction(features_df.iloc[0])
+        
+        # Adicionar metadados
+        explanation["prediction_id"] = prediction_id
+        explanation["item"] = {
+            "store_nbr": store_nbr,
+            "family": family,
+            "date": date,
+            "onpromotion": onpromotion
+        }
+        
+        return explanation
+    
+    except Exception as e:
+        logger.error(f"Error generating explanation: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating explanation: {str(e)}"
+        )
+
+
+@app.get("/users/me", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    """
+    Return information about the current authenticated user.
+    """
+    return current_user
 
 
 if __name__ == "__main__":
-    # Run the API with uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+    # Start the API server
+    port = int(os.getenv("PORT", 8000))
+    host = os.getenv("HOST", "0.0.0.0")
+    
+    logger.info(f"Starting API server on {host}:{port}")
+    uvicorn.run(app, host=host, port=port)
