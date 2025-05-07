@@ -14,30 +14,118 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
+# C extensions
+*.so
 
-# Virtual environments
-venv/
+# Distribution / packaging
+.Python
 env/
-.env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
 
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# IDE files
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE specific files
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# OS specific
 .DS_Store
 
-# Logs
-*.log
+# Project specific
+data/raw/
+data/processed/
+models/*.pkl
+models/*.joblib
+models/binaries/
+mlruns/
+.dvc/cache/
+.dvc/tmp/
+.dvc/plots/
+logs/
+credentials/
+.env
+.env.*
+!.env.example
 
-# DVC
-.dvc/cache 
+# Docker specific
+.dockerignore
+docker-compose.override.yml
+
+# MLflow specific
+mlruns/
+mlflow.db
+
+# DVC specific
+/dvc_storage/
+
+# Node modules (if using JS tools)
+node_modules/
+
+# Large files
+*.csv
+*.parquet
+*.h5
+*.hdf5
+*.pickle
+*.bin
+*.pt
+*.onnx
+*.tar.gz
+*.zip
+
+# Monitoring data
+monitoring/data_drift/
+monitoring/performance/
+monitoring/alerts/
+monitoring/visualizations/
+
+# Feature store data
+feature_store/*.json
+feature_store/*.pkl
+
+# Kaggle credentials
+kaggle.json
+
+# Exclude specific data files we want to track with DVC
+!data/.gitkeep
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Production config may contain secrets
+config.production.yaml 

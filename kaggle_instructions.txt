@@ -1,22 +1,22 @@
-Para configurar as credenciais do Kaggle:
+To set up Kaggle credentials:
 
-1. Faça login no Kaggle (https://www.kaggle.com)
-2. Clique no seu ícone de perfil e selecione "Account"
-3. Role para baixo até a seção "API"
-4. Clique em "Create New API Token" - isso baixará um arquivo kaggle.json
-5. Mova esse arquivo para a pasta ~/.kaggle usando:
-   - Move o arquivo baixado para ~/.kaggle/kaggle.json
-   - Ou crie manualmente o arquivo com o conteúdo:
+1. Log in to Kaggle (https://www.kaggle.com)
+2. Click on your profile icon and select "Account"
+3. Scroll down to the "API" section
+4. Click on "Create New API Token" - this will download a kaggle.json file
+5. Move this file to the ~/.kaggle folder using:
+   - Move the downloaded file to ~/.kaggle/kaggle.json
+   - Or manually create the file with the content:
 
 ```json
 {
-  "username": "seu_nome_de_usuario_do_kaggle",
-  "key": "sua_chave_api_do_kaggle"
+  "username": "your_kaggle_username",
+  "key": "your_kaggle_api_key"
 }
 ```
 
-6. Configure as permissões corretas:
+6. Set the correct permissions:
    chmod 600 ~/.kaggle/kaggle.json
 
-Depois de configurar, você pode iniciar o pipeline com:
+After configuration, you can start the pipeline with:
 bash run_pipeline.sh 

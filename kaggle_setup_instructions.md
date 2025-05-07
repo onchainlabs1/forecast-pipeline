@@ -1,58 +1,58 @@
-# Instruções para Configurar Credenciais do Kaggle
+# Instructions for Setting Up Kaggle Credentials
 
-Para baixar os dados do Kaggle através da API, siga estas etapas:
+To download data from Kaggle via the API, follow these steps:
 
-## 1. Crie uma conta no Kaggle
-Se você ainda não tem uma conta, crie uma em [kaggle.com](https://www.kaggle.com/).
+## 1. Create a Kaggle account
+If you don't have an account yet, create one at [kaggle.com](https://www.kaggle.com/).
 
-## 2. Gere sua API Token
-1. Faça login na sua conta do Kaggle
-2. Vá para sua conta: clique na sua foto de perfil no canto superior direito e selecione "Account"
-3. Role para baixo até a seção "API"
-4. Clique em "Create New API Token"
-5. Isso baixará um arquivo chamado `kaggle.json` com suas credenciais
+## 2. Generate your API Token
+1. Log in to your Kaggle account
+2. Go to your account: click on your profile picture in the upper right corner and select "Account"
+3. Scroll down to the "API" section
+4. Click on "Create New API Token"
+5. This will download a file called `kaggle.json` with your credentials
 
-## 3. Configure as credenciais
-1. Se o diretório `~/.kaggle` não existir, crie-o:
+## 3. Configure your credentials
+1. If the `~/.kaggle` directory doesn't exist, create it:
    ```bash
    mkdir -p ~/.kaggle
    ```
 
-2. Mova o arquivo baixado para este diretório:
+2. Move the downloaded file to this directory:
    ```bash
    mv ~/Downloads/kaggle.json ~/.kaggle/
    ```
 
-3. Defina as permissões corretas (para garantir que apenas você possa ler o arquivo com suas credenciais):
+3. Set the correct permissions (to ensure that only you can read the file with your credentials):
    ```bash
    chmod 600 ~/.kaggle/kaggle.json
    ```
 
-## 4. Teste as credenciais
-Você pode verificar se as credenciais estão configuradas corretamente executando:
+## 4. Test your credentials
+You can verify if your credentials are configured correctly by running:
 ```bash
 kaggle competitions list
 ```
 
-## 5. Continue com o pipeline
-Uma vez configuradas as credenciais, você pode continuar com o download dos dados:
+## 5. Continue with the pipeline
+Once the credentials are configured, you can continue with downloading the data:
 ```bash
 python3 src/data/load_data.py
 ```
 
-Ou executar todo o pipeline:
+Or run the entire pipeline:
 ```bash
 bash run_pipeline.sh
 ```
 
-## Estrutura do arquivo kaggle.json
-O arquivo `kaggle.json` deve ter a seguinte estrutura:
+## Structure of the kaggle.json file
+The `kaggle.json` file should have the following structure:
 ```json
 {
-  "username": "seu_username_do_kaggle",
-  "key": "sua_key_de_api"
+  "username": "your_kaggle_username",
+  "key": "your_api_key"
 }
 ```
 
-## Nota importante
-Nunca compartilhe suas credenciais do Kaggle publicamente ou adicione-as ao controle de versão! 
+## Important note
+Never share your Kaggle credentials publicly or add them to version control! 

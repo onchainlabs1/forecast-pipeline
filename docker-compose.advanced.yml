@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # API service for model predictions
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.advanced
+      target: api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./config.yaml:/app/config.yaml
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - mlops-network
+    depends_on:
+      - mlflow
+
+  # MLflow tracking server
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.advanced
+      target: dashboard
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/app/mlruns
+    environment:
+      - MLFLOW_TRACKING_URI=/app/mlruns
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minio
+      - AWS_SECRET_ACCESS_KEY=minio123
+    networks:
+      - mlops-network
+    depends_on:
+      - minio
+
+  # MinIO for S3-compatible storage
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=minio123
+    command: server /data --console-address :9001
+    networks:
+      - mlops-network
+
+  # Model monitoring service
+  monitoring:
+    build:
+      context: .
+      dockerfile: Dockerfile.advanced
+      target: monitoring
+    volumes:
+      - ./models:/app/models
+      - ./monitoring:/app/monitoring
+      - ./config.yaml:/app/config.yaml
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    restart: unless-stopped
+    networks:
+      - mlops-network
+    depends_on:
+      - mlflow
+
+  # Scheduled training service
+  training:
+    build:
+      context: .
+      dockerfile: Dockerfile.advanced
+      target: training
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./reports:/app/reports
+      - ./feature_store:/app/feature_store
+      - ./config.yaml:/app/config.yaml
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    networks:
+      - mlops-network
+    depends_on:
+      - mlflow
+
+  # Jupyter Lab for interactive development
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.advanced
+      target: development
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    networks:
+      - mlops-network
+    depends_on:
+      - mlflow
+
+  # Monitoring dashboard
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana-datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - mlops-network
+    depends_on:
+      - prometheus
+
+  # Metrics collection
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - mlops-network
+
+networks:
+  mlops-network:
+    driver: bridge
+
+volumes:
+  minio-data:
+  grafana-data:
+  prometheus-data: 

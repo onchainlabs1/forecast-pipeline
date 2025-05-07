@@ -1,16 +1,16 @@
-# Download Manual dos Dados
+# Manual Data Download
 
-Como estamos tendo problemas com as credenciais da API do Kaggle, vamos baixar os dados manualmente:
+Since we're having issues with the Kaggle API credentials, let's download the data manually:
 
-1. Acesse a página da competição no Kaggle: [Store Sales - Time Series Forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data)
+1. Go to the competition page on Kaggle: [Store Sales - Time Series Forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data)
 
-2. Faça login na sua conta do Kaggle
+2. Log in to your Kaggle account
 
-3. Clique no botão "Download All" para baixar todos os arquivos
+3. Click the "Download All" button to download all files
 
-4. Extraia o arquivo ZIP baixado
+4. Extract the downloaded ZIP file
 
-5. Mova os seguintes arquivos para o diretório `/Users/fabio/Desktop/mlproject/data/raw/`:
+5. Move the following files to the `/Users/fabio/Desktop/mlproject/data/raw/` directory:
    - train.csv
    - test.csv
    - holidays_events.csv
@@ -18,20 +18,20 @@ Como estamos tendo problemas com as credenciais da API do Kaggle, vamos baixar o
    - stores.csv
    - transactions.csv
 
-## Após o download manual
+## After manual download
 
-Uma vez que os arquivos estejam no diretório correto, podemos continuar com o pipeline:
+Once the files are in the correct directory, we can continue with the pipeline:
 
 ```bash
-# Verifique se os arquivos estão no local correto
+# Check if the files are in the correct location
 ls -la data/raw/
 
-# Execute o pré-processamento dos dados
+# Run data preprocessing
 python3 src/data/preprocess.py
 
-# Treine o modelo
+# Train the model
 python3 src/train_model.py
 
-# Ou execute todo o pipeline (pule a etapa de download)
+# Or run the entire pipeline (skip the download step)
 bash run_pipeline.sh
 ``` 

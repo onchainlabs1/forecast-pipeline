@@ -1,0 +1,93 @@
+# Multi-stage Dockerfile for Store Sales Forecasting
+
+# Base stage with Python and dependencies
+FROM python:3.9-slim AS base
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry for dependency management
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH="${PATH}:/root/.local/bin"
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    POETRY_VERSION=1.5.1 \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false
+
+# Copy just the requirements to leverage Docker cache
+COPY pyproject.toml poetry.lock* ./
+RUN poetry install --no-dev --no-root
+
+# Development stage for local development
+FROM base AS development
+
+# Install development dependencies
+RUN poetry install --no-root
+
+# Copy the entire codebase
+COPY . .
+
+# Training stage for model training
+FROM base AS training
+
+# Copy only what's needed for training
+COPY src/ ./src/
+COPY data/ ./data/
+COPY models/ ./models/
+COPY reports/ ./reports/
+COPY feature_store/ ./feature_store/
+COPY config.yaml ./
+
+# Set entrypoint for training
+ENTRYPOINT ["python", "src/training_pipeline.py"]
+
+# API stage for production deployment
+FROM base AS api
+
+# Copy only what's needed for the API
+COPY src/ ./src/
+COPY models/ ./models/
+COPY config.yaml ./
+
+# Expose port for API
+EXPOSE 8000
+
+# Set entrypoint for API
+ENTRYPOINT ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Monitoring stage for running the monitoring service
+FROM base AS monitoring
+
+# Copy only what's needed for monitoring
+COPY src/ ./src/
+COPY models/ ./models/
+COPY monitoring/ ./monitoring/
+COPY config.yaml ./
+
+# Set entrypoint for monitoring
+ENTRYPOINT ["python", "src/monitoring/run_monitoring.py"]
+
+# Dashboard stage for MLflow UI
+FROM base AS dashboard
+
+# Install MLflow
+RUN pip install mlflow==2.3.1
+
+# Copy MLflow data
+COPY mlruns/ ./mlruns/
+
+# Expose port for MLflow UI
+EXPOSE 5000
+
+# Set entrypoint for MLflow UI
+ENTRYPOINT ["mlflow", "ui", "--host", "0.0.0.0", "--port", "5000"] 

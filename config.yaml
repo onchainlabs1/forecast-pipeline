@@ -1,0 +1,92 @@
+# Configuration file for Store Sales Forecasting
+
+# Environments: development, staging, production
+environment: development
+
+# Data paths
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  feature_store_dir: "feature_store"
+  
+# MLflow configuration
+mlflow:
+  tracking_uri: "mlruns"
+  experiment_name: "store-sales-forecasting"
+  register_model: true
+  model_name: "store-sales-forecaster"
+  model_stage_dev: "Development"
+  model_stage_staging: "Staging"
+  model_stage_prod: "Production"
+
+# Feature Store configuration
+feature_store:
+  enabled: true
+  save_metadata: true
+  save_transformers: true
+
+# Model configuration
+model:
+  type: "lightgbm"  # Options: lightgbm, prophet, arima
+  lightgbm:
+    objective: "regression"
+    metric: "rmse"
+    boosting_type: "gbdt"
+    learning_rate: 0.05
+    num_leaves: 31
+    max_depth: -1
+    n_estimators: 100
+    early_stopping_rounds: 50
+    random_state: 42
+  prophet:
+    yearly_seasonality: true
+    weekly_seasonality: true
+    daily_seasonality: false
+    seasonality_prior_scale: 10.0
+    holidays_prior_scale: 10.0
+    changepoint_prior_scale: 0.05
+  arima:
+    p: 5
+    d: 1
+    q: 0
+    seasonal_p: 1
+    seasonal_d: 1
+    seasonal_q: 0
+    s: 7  # Weekly seasonality
+
+# Model monitoring configuration
+monitoring:
+  enabled: true
+  drift_metrics:
+    - ks_statistic
+    - js_divergence
+  drift_threshold: 0.1
+  performance_degradation_threshold: 0.1
+  check_frequency: "daily"  # Options: hourly, daily, weekly
+  generate_visualizations: true
+  alerts:
+    enabled: true
+    channels:
+      - type: "file"
+        path: "monitoring/alerts"
+      # Add more channels as needed:
+      # - type: "email"
+      #   recipients: ["your-email@example.com"]
+      # - type: "slack"
+      #   webhook_url: "https://hooks.slack.com/services/your-webhook-url"
+
+# API configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: true
+  workers: 4
+  batch_size: 1000
+
+# Scheduler configuration
+scheduler:
+  retraining:
+    cron: "0 2 * * 1"  # Every Monday at 2 AM
+    trigger_on_drift: true
+    drift_threshold_to_retrain: 0.3
+    performance_threshold_to_retrain: 0.15 

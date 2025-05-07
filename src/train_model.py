@@ -11,7 +11,7 @@ import logging
 import sys
 from pathlib import Path
 
-# Adiciona o diretório raiz do projeto ao sys.path para importações relativas
+# Add the project root directory to sys.path for relative imports
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 sys.path.append(str(PROJECT_DIR))
 
@@ -24,7 +24,7 @@ import joblib
 import mlflow
 
 # Import utilities
-# Alterando a importação para funcionar com o sys.path modificado
+# Modified import to work with the modified sys.path
 from src.utils.mlflow_utils import (
     setup_mlflow,
     log_model_params,
@@ -40,7 +40,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Define paths
-# PROJECT_DIR já foi definido acima
+# PROJECT_DIR already defined above
 PROCESSED_DATA_DIR = PROJECT_DIR / "data" / "processed"
 MODELS_DIR = PROJECT_DIR / "models"
 REPORTS_DIR = PROJECT_DIR / "reports"
@@ -99,11 +99,11 @@ def prepare_features_and_target(data):
         X = data.drop(drop_cols, axis=1)
         y = data['sales'] if 'sales' in data.columns else None
         
-        # Verificando tipos de colunas
+        # Checking column types
         object_columns = X.select_dtypes(include=['object']).columns.tolist()
         logger.info(f"Converting {len(object_columns)} object columns to categorical: {object_columns}")
         
-        # Convertendo colunas de texto para categorias numéricas
+        # Converting text columns to numeric categories
         for col in object_columns:
             X[col] = X[col].astype('category').cat.codes.astype('int32')
         
@@ -188,7 +188,7 @@ def train_lightgbm_model(X, y, n_splits=5):
                 train_data = lgb.Dataset(X_train, label=y_train)
                 val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
                 
-                # Train model - corrigindo os parâmetros de treinamento
+                # Train model - fixing the training parameters
                 callbacks = [lgb.early_stopping(50, verbose=False)]
                 model = lgb.train(
                     params,

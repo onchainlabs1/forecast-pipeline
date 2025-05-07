@@ -1,32 +1,32 @@
 #!/bin/bash
 
-# Script para criar o arquivo kaggle.json
+# Script to create the kaggle.json file
 
-# Cria o diretório ~/.kaggle se não existir
+# Creates the ~/.kaggle directory if it doesn't exist
 mkdir -p ~/.kaggle
 
-# Pede as informações do usuário
-echo "Digite seu nome de usuário do Kaggle:"
+# Asks for user information
+echo "Enter your Kaggle username:"
 read username
 
-echo "Digite sua chave de API do Kaggle:"
+echo "Enter your Kaggle API key:"
 read key
 
-# Cria o arquivo kaggle.json
+# Creates the kaggle.json file
 echo "{
   \"username\": \"$username\",
   \"key\": \"$key\"
 }" > ~/.kaggle/kaggle.json
 
-# Define as permissões corretas
+# Sets the correct permissions
 chmod 600 ~/.kaggle/kaggle.json
 
-echo "Arquivo kaggle.json criado com sucesso em ~/.kaggle/kaggle.json"
-echo "Testando a configuração..."
+echo "kaggle.json file successfully created at ~/.kaggle/kaggle.json"
+echo "Testing the configuration..."
 
-# Testa a configuração
+# Tests the configuration
 kaggle competitions list | head -n 5
 
 echo ""
-echo "Se você viu uma lista de competições acima, a configuração está correta!"
-echo "Agora você pode executar: python3 src/data/load_data.py" 
+echo "If you saw a list of competitions above, the configuration is correct!"
+echo "Now you can run: python3 src/data/load_data.py" 
