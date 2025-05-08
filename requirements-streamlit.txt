@@ -1,0 +1,35 @@
+numpy>=1.21.0
+pandas>=1.3.0
+scikit-learn>=1.0.0
+lightgbm>=3.3.0
+prophet>=1.1.0
+statsmodels>=0.13.0
+matplotlib>=3.5.0
+seaborn>=0.11.0
+jupyter>=1.0.0
+kaggle>=1.5.12
+mlflow>=1.20.0
+dvc>=2.10.0
+fastapi>=0.75.0
+uvicorn>=0.15.0
+pytest>=6.2.5
+black>=22.1.0
+isort>=5.10.0
+python-dotenv>=0.20.0
+tsfeatures>=0.1.0
+joblib>=1.1.0
+
+# Adicionando componentes de MLOps mais avançados
+apache-airflow>=2.7.0
+great-expectations>=0.17.0
+shap>=0.43.0
+python-jose[cryptography]>=3.3.0  # Para JWT
+passlib[bcrypt]>=1.7.4  # Para segurança
+sentry-sdk>=1.30.0  # Para monitoramento de erros 
+
+# Streamlit dashboard components
+streamlit>=1.25.0
+plotly>=5.15.0
+altair>=5.0.0
+requests>=2.31.0
+pyjwt>=2.8.0 
