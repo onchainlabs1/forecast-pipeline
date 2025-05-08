@@ -19,6 +19,7 @@ import plotly.graph_objects as go
 import altair as alt
 from PIL import Image
 import jwt
+from plotly.subplots import make_subplots
 
 # Add project root to sys.path
 project_root = Path(__file__).parents[2]
@@ -91,7 +92,11 @@ def get_prediction(token, store_nbr, family, onpromotion, date):
         )
         
         if response.status_code == 200:
-            return response.json()
+            result = response.json()
+            # Garantir que sempre temos a chave 'prediction'
+            if 'predicted_sales' in result and 'prediction' not in result:
+                result['prediction'] = result['predicted_sales']
+            return result
         else:
             st.error(f"Prediction failed: {response.json().get('detail', 'Unknown error')}")
             return None
@@ -147,13 +152,11 @@ def get_stores():
         if response.status_code == 200:
             return response.json()
         else:
-            st.warning("Failed to fetch stores from API, using cached values.")
-            # Fallback
-            return list(range(1, 55))
+            st.error(f"Failed to fetch stores: {response.status_code} - {response.text}")
+            return []
     except Exception as e:
-        st.warning(f"Error fetching stores: {str(e)}")
-        # Fallback
-        return list(range(1, 55))
+        st.error(f"Error fetching stores: {str(e)}")
+        return []
 
 def get_families():
     """
@@ -164,27 +167,11 @@ def get_families():
         if response.status_code == 200:
             return response.json()
         else:
-            st.warning("Failed to fetch product families from API, using cached values.")
-            # Fallback
-            return [
-                "BEVERAGES", "BREAD/BAKERY", "CLEANING", "DAIRY", "DELI", 
-                "EGGS", "FROZEN FOODS", "GROCERY I", "GROCERY II", "HARDWARE", 
-                "HOME AND KITCHEN I", "HOME AND KITCHEN II", "HOME APPLIANCES", 
-                "LADIESWEAR", "LIQUOR,WINE,BEER", "MEATS", "PERSONAL CARE", 
-                "PET SUPPLIES", "PLAYERS AND ELECTRONICS", "POULTRY", 
-                "PREPARED FOODS", "PRODUCE", "SCHOOL AND OFFICE SUPPLIES", "SEAFOOD"
-            ]
+            st.error(f"Failed to fetch product families: {response.status_code} - {response.text}")
+            return []
     except Exception as e:
-        st.warning(f"Error fetching product families: {str(e)}")
-        # Fallback
-        return [
-            "BEVERAGES", "BREAD/BAKERY", "CLEANING", "DAIRY", "DELI", 
-            "EGGS", "FROZEN FOODS", "GROCERY I", "GROCERY II", "HARDWARE", 
-            "HOME AND KITCHEN I", "HOME AND KITCHEN II", "HOME APPLIANCES", 
-            "LADIESWEAR", "LIQUOR,WINE,BEER", "MEATS", "PERSONAL CARE", 
-            "PET SUPPLIES", "PLAYERS AND ELECTRONICS", "POULTRY", 
-            "PREPARED FOODS", "PRODUCE", "SCHOOL AND OFFICE SUPPLIES", "SEAFOOD"
-        ]
+        st.error(f"Error fetching product families: {str(e)}")
+        return []
 
 def get_sales_data(token, store_nbr, family, days=90):
     """
@@ -206,13 +193,11 @@ def get_sales_data(token, store_nbr, family, days=90):
             data = response.json()
             return pd.DataFrame(data)
         else:
-            st.warning("Failed to fetch sales data from API, using generated data.")
-            # Fallback to generated data
-            return get_demo_sales_data()
+            st.error(f"Failed to fetch sales data: {response.status_code} - {response.text}")
+            return pd.DataFrame(columns=['date', 'sales'])
     except Exception as e:
-        st.warning(f"Error fetching sales data: {str(e)}")
-        # Fallback to generated data
-        return get_demo_sales_data()
+        st.error(f"Error fetching sales data: {str(e)}")
+        return pd.DataFrame(columns=['date', 'sales'])
 
 def get_metric_summary(token):
     """
@@ -228,52 +213,11 @@ def get_metric_summary(token):
         if response.status_code == 200:
             return response.json()
         else:
-            st.warning("Failed to fetch metrics from API, using demo data.")
-            # Return fallback data
-            return {
-                "total_stores": 54,
-                "total_families": 24,
-                "avg_sales": 1234.56,
-                "forecast_accuracy": 87.5
-            }
+            st.error(f"Failed to fetch metrics: {response.status_code} - {response.text}")
+            return None
     except Exception as e:
-        st.warning(f"Error fetching metrics: {str(e)}")
-        # Return fallback data
-        return {
-            "total_stores": 54,
-            "total_families": 24,
-            "avg_sales": 1234.56,
-            "forecast_accuracy": 87.5
-        }
-
-# Demo data functions for development and fallback
-def get_demo_sales_data():
-    """
-    Generate demo sales data when API is not available.
-    """
-    dates = pd.date_range(start='2023-01-01', end='2023-12-31', freq='D')
-    
-    # Create seasonal patterns
-    sales = np.sin(np.arange(len(dates)) * 0.1) * 20 + np.random.randn(len(dates)) * 5 + 100
-    
-    # Add weekly patterns
-    for i in range(len(dates)):
-        if dates[i].dayofweek >= 5:  # Weekend
-            sales[i] *= 1.5
-    
-    # Add special promotions spikes
-    promo_days = np.random.choice(len(dates), 30, replace=False)
-    sales[promo_days] *= 2
-    
-    df = pd.DataFrame({
-        'date': dates,
-        'sales': sales,
-        'is_promotion': np.zeros(len(dates))
-    })
-    
-    df.loc[promo_days, 'is_promotion'] = 1
-    
-    return df
+        st.error(f"Error fetching metrics: {str(e)}")
+        return None
 
 # UI components
 def render_sidebar():
@@ -355,63 +299,131 @@ def render_sidebar():
 
 def render_dashboard():
     """
-    Render the main dashboard.
+    Render the main dashboard with real data.
     """
     st.title("Store Sales Forecast Dashboard")
     
-    # Get real metrics if authenticated, otherwise use demo data
+    # Check API health
+    health = get_health()
+    if health["status"] != "healthy":
+        st.error(f"API is not available: {health.get('message', 'Unknown error')}")
+        st.warning("Please make sure the API is running before using the dashboard.")
+        st.stop()
+    
+    # Get real metrics if authenticated
+    metrics = None
     if "token" in st.session_state:
         metrics = get_metric_summary(st.session_state.token)
-    else:
-        metrics = {
-            "total_stores": 54,
-            "total_families": 24,
-            "avg_sales": 1234.56,
-            "forecast_accuracy": 87.5
-        }
+    
+    if not metrics:
+        st.error("Unable to load metrics data. Please log in and ensure API connection is working.")
+        st.stop()
     
     # Summary metrics
     col1, col2, col3, col4 = st.columns(4)
     
-    col1.metric("Total Stores", f"{metrics['total_stores']}", "+3")
-    col2.metric("Total Products", f"{metrics['total_families']} families", "")
-    col3.metric("Average Sales", f"${metrics['avg_sales']:.2f}", "+5.2%")
-    col4.metric("Forecast Accuracy", f"{metrics['forecast_accuracy']:.1f}%", "+2.3%")
+    col1.metric("Total Stores", f"{metrics['total_stores']}", None)
+    col2.metric("Total Products", f"{metrics['total_families']} families", None)
+    col3.metric("Average Sales", f"${metrics['avg_sales']:.2f}", None)
+    col4.metric("Forecast Accuracy", f"{metrics['forecast_accuracy']:.1f}%", None)
+    
+    # Get stores and families from API
+    stores = get_stores()
+    families = get_families()
+    
+    if not stores or not families:
+        st.error("Failed to load store or product family data from API.")
+        st.stop()
     
     # Filter controls
     st.subheader("Filters")
     col1, col2, col3 = st.columns(3)
+    
+    # Default values we know that work
+    default_store_index = 0
+    default_family_index = 0
+    
+    # Stores and families we know have data
+    good_combinations = [
+        {"store": 1, "family": "PRODUCE"},
+        {"store": 1, "family": "FROZEN FOODS"},
+        {"store": 1, "family": "GROCERY II"},
+        {"store": 1, "family": "LIQUOR,WINE,BEER"},
+        {"store": 1, "family": "HOME APPLIANCES"}
+    ]
+    
+    # Try to find default values in the stores and families lists
+    if stores and families:
+        # Look for store 1 in the stores list
+        if 1 in stores:
+            default_store_index = stores.index(1)
+            
+        # Look for "PRODUCE" in the families list
+        for good_family in ["PRODUCE", "FROZEN FOODS", "GROCERY II", "LIQUOR,WINE,BEER", "HOME APPLIANCES"]:
+            if good_family in families:
+                default_family_index = families.index(good_family)
+                break
+    
     with col1:
-        store = st.selectbox("Store", get_stores())
+        store = st.selectbox("Store", stores, index=default_store_index) if stores else st.text_input("Store Number")
     with col2:
-        family = st.selectbox("Product Family", get_families())
+        family = st.selectbox("Product Family", families, index=default_family_index) if families else st.text_input("Product Family")
     with col3:
         days = st.slider("Days to Display", 30, 365, 90)
     
-    # Get sales data - real if authenticated, demo otherwise
-    if "token" in st.session_state:
-        sales_data = get_sales_data(st.session_state.token, store, family, days)
-    else:
-        sales_data = get_demo_sales_data()
+    # Get sales data - must have auth token
+    if "token" not in st.session_state:
+        st.error("Please log in to view sales data.")
+        st.stop()
+    
+    # Try to get data for the selected combination
+    sales_data = get_sales_data(st.session_state.token, store, family, days)
+    
+    # If no data found, try the known good combinations
+    if sales_data.empty:
+        st.warning(f"No data found for Store {store}, Family {family}. Trying to find combinations with data...")
+        
+        found_data = False
+        for combo in good_combinations:
+            st.info(f"Trying Store {combo['store']}, Family {combo['family']}...")
+            test_data = get_sales_data(st.session_state.token, combo['store'], combo['family'], days)
+            
+            if not test_data.empty:
+                st.success(f"Data found for Store {combo['store']}, Family {combo['family']}!")
+                sales_data = test_data
+                store = combo['store']
+                family = combo['family']
+                found_data = True
+                break
+        
+        # If still no data found, show error
+        if not found_data:
+            st.error("Could not find data for any known combination.")
+            
+            # Suggest combinations that should work
+            st.markdown("### Suggested Combinations with Data")
+            st.markdown("The following combinations should have data. Verify that the families are exactly as shown below:")
+            
+            for combo in good_combinations:
+                st.markdown(f"- Store **{combo['store']}** with family **{combo['family']}**")
+            
+            st.stop()
     
     # Time series chart
     st.subheader("Sales Trends")
     
-    # Filter data based on user selection
-    filtered_data = sales_data.iloc[-days:]
-    
     # Create a time series chart
     fig = px.line(
-        filtered_data, 
+        sales_data, 
         x='date', 
         y='sales',
         title=f"Sales Trend for Store {store} - {family}",
         height=400
     )
     
-    # Add markers for promotions
-    if 'is_promotion' in filtered_data.columns:
-        promo_data = filtered_data[filtered_data['is_promotion'] == 1]
+    # Add markers for promotions if available
+    if 'is_promotion' in sales_data.columns:
+        promo_data = sales_data[sales_data['is_promotion'] == 1]
         fig.add_trace(
             go.Scatter(
                 x=promo_data['date'],
@@ -424,58 +436,68 @@ def render_dashboard():
     
     st.plotly_chart(fig, use_container_width=True)
     
-    # Store comparison
-    st.subheader("Store Comparison")
+    # Get real comparison data from API
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        compare_response = requests.get(
+            f"{API_URL}/store_comparison",
+            headers=headers
+        )
+        
+        if compare_response.status_code == 200:
+            store_perf = pd.DataFrame(compare_response.json())
+            
+            # Create bar chart
+            fig = px.bar(
+                store_perf, 
+                x='store', 
+                y='sales',
+                color='forecast_accuracy',
+                color_continuous_scale='Viridis',
+                title="Sales by Store",
+                height=400
+            )
+            
+            st.subheader("Store Comparison")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Unable to load store comparison data.")
+    except Exception as e:
+        st.warning(f"Error loading store comparison: {str(e)}")
     
-    # Create demo comparison data
-    stores = np.random.choice(get_stores(), 10, replace=False)
-    store_perf = pd.DataFrame({
-        'store': [f"Store {s}" for s in stores],
-        'sales': np.random.randint(1000, 5000, size=10),
-        'forecast_accuracy': np.random.uniform(0.7, 0.95, size=10)
-    })
-    
-    # Create bar chart
-    fig = px.bar(
-        store_perf, 
-        x='store', 
-        y='sales',
-        color='forecast_accuracy',
-        color_continuous_scale='Viridis',
-        title="Sales by Store",
-        height=400
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Product family performance
-    st.subheader("Product Family Performance")
-    
-    # Create demo product performance data
-    families = np.random.choice(get_families(), 10, replace=False)
-    family_perf = pd.DataFrame({
-        'family': families,
-        'sales': np.random.randint(1000, 8000, size=10),
-        'growth': np.random.uniform(-0.2, 0.3, size=10)
-    })
-    
-    # Create horizontal bar chart
-    fig = px.bar(
-        family_perf.sort_values('sales', ascending=True), 
-        y='family', 
-        x='sales',
-        color='growth',
-        color_continuous_scale='RdYlGn',
-        title="Sales by Product Family",
-        orientation='h',
-        height=500
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+    # Get real product family performance from API  
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        family_response = requests.get(
+            f"{API_URL}/family_performance",
+            headers=headers
+        )
+        
+        if family_response.status_code == 200:
+            family_perf = pd.DataFrame(family_response.json())
+            
+            # Create horizontal bar chart
+            fig = px.bar(
+                family_perf.sort_values('sales', ascending=True), 
+                y='family', 
+                x='sales',
+                color='growth',
+                color_continuous_scale='RdYlGn',
+                title="Sales by Product Family",
+                orientation='h',
+                height=500
+            )
+            
+            st.subheader("Product Family Performance")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Unable to load product family performance data.")
+    except Exception as e:
+        st.warning(f"Error loading product family performance: {str(e)}")
 
 def render_predictions():
     """
-    Render the predictions page.
+    Render the predictions page using real data from the API.
     """
     st.title("Sales Predictions")
     
@@ -483,15 +505,46 @@ def render_predictions():
     Use this page to get sales predictions for specific stores, product families, and dates.
     """)
     
+    # Check API health before allowing predictions
+    health = get_health()
+    if health["status"] != "healthy":
+        st.error(f"API is not available: {health.get('message', 'Unknown error')}")
+        st.warning("Please make sure the API is running before making predictions.")
+        st.stop()
+    
+    # Get stores and families from API
+    stores = get_stores()
+    families = get_families()
+    
+    if not stores or not families:
+        st.error("Failed to load store or product family data from API.")
+        st.stop()
+    
     # Form for predictions
     with st.form("prediction_form"):
         col1, col2, col3 = st.columns(3)
         
+        # Default values we know that work
+        default_store_index = 0
+        default_family_index = 0
+        
+        # Tenta encontrar os índices dos valores default nos stores e families
+        if stores and families:
+            # Procura store 1 na lista de lojas
+            if 1 in stores:
+                default_store_index = stores.index(1)
+                
+            # Procura "PRODUCE" na lista de famílias
+            for good_family in ["PRODUCE", "FROZEN FOODS", "GROCERY II", "LIQUOR,WINE,BEER", "HOME APPLIANCES"]:
+                if good_family in families:
+                    default_family_index = families.index(good_family)
+                    break
+        
         with col1:
-            store_nbr = st.selectbox("Store Number", get_stores())
+            store_nbr = st.selectbox("Store Number", stores, index=default_store_index)
         
         with col2:
-            family = st.selectbox("Product Family", get_families())
+            family = st.selectbox("Product Family", families, index=default_family_index)
         
         with col3:
             onpromotion = st.checkbox("On Promotion")
@@ -503,130 +556,146 @@ def render_predictions():
     # Process form submission
     if submitted:
         if "token" in st.session_state:
-            # Make prediction request
-            prediction = get_prediction(
-                st.session_state.token,
-                store_nbr,
-                family,
-                onpromotion,
-                date.strftime("%Y-%m-%d")
-            )
-            
-            if prediction:
-                # Show prediction results
-                st.success("Prediction successful!")
-                
-                # Format prediction
-                st.subheader("Prediction Results")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.metric(
-                        "Predicted Sales", 
-                        f"${prediction['predicted_sales']:.2f}",
-                        delta=None
-                    )
-                
-                # Save prediction ID for explanation
-                prediction_id = f"{store_nbr}-{family}-{date}"
-                
-                # Get explanation
-                explanation = get_explanation(
+            with st.spinner("Getting prediction..."):
+                # Make prediction request
+                prediction = get_prediction(
                     st.session_state.token,
-                    prediction_id,
                     store_nbr,
                     family,
                     onpromotion,
                     date.strftime("%Y-%m-%d")
                 )
                 
-                if explanation:
-                    st.subheader("Prediction Explanation")
+                if prediction:
+                    # Show prediction results
+                    st.success("Prediction successful!")
                     
-                    # Display feature contributions
-                    feature_contributions = explanation.get("feature_contributions", [])
-                    if feature_contributions:
-                        # Create dataframe for chart
-                        feat_df = pd.DataFrame(feature_contributions)
-                        
-                        # Sort by absolute contribution
-                        feat_df['abs_contribution'] = feat_df['contribution'].abs()
-                        feat_df = feat_df.sort_values('abs_contribution', ascending=False).head(10)
-                        
-                        # Create waterfall chart
-                        fig = go.Figure(go.Waterfall(
-                            name="Features",
-                            orientation="h",
-                            measure=["relative"] * len(feat_df),
-                            y=feat_df['feature'],
-                            x=feat_df['contribution'],
-                            connector={"line": {"color": "rgb(63, 63, 63)"}},
-                            decreasing={"marker": {"color": "rgba(255, 50, 50, 0.8)"}},
-                            increasing={"marker": {"color": "rgba(50, 200, 50, 0.8)"}},
-                            text=feat_df['value'].round(2)
-                        ))
-                        
-                        fig.update_layout(
-                            title="Feature Contributions to Prediction",
-                            showlegend=False,
-                            height=500
+                    # Format prediction
+                    st.subheader("Prediction Results")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.metric(
+                            "Predicted Sales", 
+                            f"${prediction['prediction']:.2f}",
+                            delta=None
+                        )
+                    
+                    # Save prediction ID for explanation
+                    prediction_id = prediction.get('prediction_id', f"{store_nbr}-{family}-{date}")
+                    
+                    # Get explanation
+                    with st.spinner("Generating explanation..."):
+                        try:
+                            explanation = get_explanation(
+                                st.session_state.token,
+                                prediction_id,
+                                store_nbr,
+                                family,
+                                onpromotion,
+                                date.strftime("%Y-%m-%d")
+                            )
+                            
+                            if explanation:
+                                st.subheader("Prediction Explanation")
+                                
+                                # Display feature contributions
+                                feature_contributions = explanation.get("feature_contributions", [])
+                                if feature_contributions:
+                                    # Create dataframe for chart
+                                    feat_df = pd.DataFrame(feature_contributions)
+                                    
+                                    # Sort by absolute contribution
+                                    feat_df['abs_contribution'] = feat_df['contribution'].abs()
+                                    feat_df = feat_df.sort_values('abs_contribution', ascending=False).head(10)
+                                    
+                                    # Create waterfall chart
+                                    fig = go.Figure(go.Waterfall(
+                                        name="Features",
+                                        orientation="h",
+                                        measure=["relative"] * len(feat_df),
+                                        y=feat_df['feature'],
+                                        x=feat_df['contribution'],
+                                        connector={"line": {"color": "rgb(63, 63, 63)"}},
+                                        decreasing={"marker": {"color": "rgba(255, 50, 50, 0.8)"}},
+                                        increasing={"marker": {"color": "rgba(50, 200, 50, 0.8)"}},
+                                        text=feat_df['value'].round(2)
+                                    ))
+                                    
+                                    fig.update_layout(
+                                        title="Feature Contributions to Prediction",
+                                        showlegend=False,
+                                        height=500
+                                    )
+                                    
+                                    st.plotly_chart(fig, use_container_width=True)
+                                else:
+                                    st.warning("Explanation available but no feature contributions found.")
+                            else:
+                                st.warning("Unable to generate explanation for this prediction.")
+                        except Exception as exp_error:
+                            st.error(f"Error generating explanation: {str(exp_error)}")
+                            st.warning("Unable to generate explanation for this prediction. Model may not support explainability.")
+                    
+                    # Historical context from real API data
+                    st.subheader("Historical Context")
+                    st.markdown("Here's how this prediction compares to historical sales:")
+                    
+                    # Get real historical data
+                    try:
+                        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+                        hist_response = requests.get(
+                            f"{API_URL}/historical_sales",
+                            params={
+                                "store_nbr": store_nbr,
+                                "family": family,
+                                "days": 60
+                            },
+                            headers=headers
                         )
                         
-                        st.plotly_chart(fig, use_container_width=True)
-                
-                # Historical context
-                st.subheader("Historical Context")
-                st.markdown("Here's how this prediction compares to historical sales:")
-                
-                # Create demo historical data
-                hist_dates = pd.date_range(end=date - timedelta(days=1), periods=60, freq='D')
-                hist_sales = np.sin(np.arange(len(hist_dates)) * 0.3) * 10 + np.random.randn(len(hist_dates)) * 5 + 50
-                
-                # Add some randomness for weekends
-                for i in range(len(hist_dates)):
-                    if hist_dates[i].dayofweek >= 5:  # Weekend
-                        hist_sales[i] *= 1.3
-                
-                hist_df = pd.DataFrame({
-                    'date': hist_dates,
-                    'sales': hist_sales
-                })
-                
-                # Add the prediction point
-                future_df = pd.DataFrame({
-                    'date': [date],
-                    'sales': [prediction['predicted_sales']]
-                })
-                
-                # Plot
-                fig = px.line(
-                    hist_df, 
-                    x='date', 
-                    y='sales',
-                    title=f"Historical Sales and Prediction for Store {store_nbr} - {family}",
-                    height=400
-                )
-                
-                # Add the prediction point
-                fig.add_trace(
-                    go.Scatter(
-                        x=future_df['date'],
-                        y=future_df['sales'],
-                        mode='markers',
-                        marker=dict(size=12, color='red'),
-                        name='Prediction'
-                    )
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
-                
+                        if hist_response.status_code == 200:
+                            hist_data = hist_response.json()
+                            hist_df = pd.DataFrame(hist_data)
+                            
+                            # Add the prediction point
+                            future_df = pd.DataFrame({
+                                'date': [date],
+                                'sales': [prediction['prediction']]  # Usa o mesmo valor verificado anteriormente
+                            })
+                            
+                            # Plot
+                            fig = px.line(
+                                hist_df, 
+                                x='date', 
+                                y='sales',
+                                title=f"Historical Sales and Prediction for Store {store_nbr} - {family}",
+                                height=400
+                            )
+                            
+                            # Add the prediction point
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=future_df['date'],
+                                    y=future_df['sales'],
+                                    mode='markers',
+                                    marker=dict(size=12, color='red'),
+                                    name='Prediction'
+                                )
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                        else:
+                            st.warning("Unable to load historical data for comparison.")
+                    except Exception as e:
+                        st.warning(f"Error loading historical data: {str(e)}")
         else:
             st.error("Please login to make predictions.")
 
 def render_model_insights():
     """
-    Render the model insights page.
+    Render the model insights page with real data from the API.
     """
     st.title("Model Insights")
     
@@ -634,143 +703,157 @@ def render_model_insights():
     This page provides insights into the model performance and feature importance.
     """)
     
+    # Check API health
+    health = get_health()
+    if health["status"] != "healthy":
+        st.error(f"API is not available: {health.get('message', 'Unknown error')}")
+        st.warning("Please make sure the API is running before viewing model insights.")
+        st.stop()
+    
+    if "token" not in st.session_state:
+        st.error("Please login to view model insights.")
+        st.stop()
+    
+    # Get model list from API
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        models_response = requests.get(
+            f"{API_URL}/models",
+            headers=headers
+        )
+        
+        if models_response.status_code == 200:
+            models_data = models_response.json()
+            models = [model["name"] for model in models_data]
+        else:
+            st.warning("Unable to fetch model list from API, using default values.")
+            models = ["LightGBM (Production)", "Prophet (Staging)", "ARIMA (Development)"]
+    except Exception as e:
+        st.warning(f"Error fetching model list: {str(e)}")
+        models = ["LightGBM (Production)", "Prophet (Staging)", "ARIMA (Development)"]
+    
     # Model selection
     st.subheader("Model Selection")
-    models = ["LightGBM (Production)", "Prophet (Staging)", "ARIMA (Development)"]
     selected_model = st.selectbox("Select Model", models)
     
-    # Model performance metrics
-    st.subheader("Performance Metrics")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    # Demo metrics based on selected model
-    if selected_model == "LightGBM (Production)":
-        col1.metric("RMSE", "245.32", "-12.5%")
-        col2.metric("MAE", "187.44", "-8.2%")
-        col3.metric("MAPE", "14.3%", "-5.1%")
-        col4.metric("R²", "0.87", "+0.04")
-    elif selected_model == "Prophet (Staging)":
-        col1.metric("RMSE", "267.89", "+9.2%")
-        col2.metric("MAE", "201.35", "+7.4%")
-        col3.metric("MAPE", "16.2%", "+13.3%")
-        col4.metric("R²", "0.82", "-0.06")
-    else:  # ARIMA
-        col1.metric("RMSE", "295.67", "+20.5%")
-        col2.metric("MAE", "234.12", "+24.9%")
-        col3.metric("MAPE", "18.7%", "+30.8%")
-        col4.metric("R²", "0.75", "-0.14")
-    
-    # Feature importance
-    st.subheader("Feature Importance")
-    
-    # Demo feature importance
-    features = [
-        "onpromotion", "day_of_week", "store_nbr", "month", 
-        "day_of_month", "is_weekend", "family_GROCERY I", 
-        "family_BEVERAGES", "family_PRODUCE", "family_CLEANING"
-    ]
-    importance = np.random.uniform(0.01, 0.25, size=len(features))
-    importance = importance / importance.sum()
-    
-    # Sort by importance
-    feat_imp = pd.DataFrame({
-        'feature': features,
-        'importance': importance
-    }).sort_values('importance', ascending=True)
-    
-    # Create horizontal bar chart
-    fig = px.bar(
-        feat_imp, 
-        y='feature', 
-        x='importance',
-        orientation='h',
-        title="Feature Importance",
-        height=500,
-        color='importance',
-        color_continuous_scale='Viridis'
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Model drift
-    st.subheader("Model Drift Monitoring")
-    
-    # Time period selection
-    time_period = st.radio("Select Time Period", ["Last Week", "Last Month", "Last Quarter"], horizontal=True)
-    
-    # Demo drift data
-    days = 7
-    if time_period == "Last Month":
-        days = 30
-    elif time_period == "Last Quarter":
-        days = 90
-    
-    dates = pd.date_range(end=datetime.now().date(), periods=days, freq='D')
-    
-    # Create drift metrics
-    drift_df = pd.DataFrame({
-        'date': dates,
-        'performance_score': np.random.uniform(0.7, 0.95, size=days),
-        'data_drift_score': np.random.uniform(0.0, 0.3, size=days)
-    })
-    
-    # Add a trend
-    t = np.arange(days) / days
-    drift_df['performance_score'] = drift_df['performance_score'] - t * 0.1
-    drift_df['data_drift_score'] = drift_df['data_drift_score'] + t * 0.15
-    
-    # Plot
-    fig = go.Figure()
-    
-    fig.add_trace(
-        go.Scatter(
-            x=drift_df['date'],
-            y=drift_df['performance_score'],
-            mode='lines',
-            name='Performance',
-            line=dict(color='blue')
+    # Get real model performance metrics from API
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        metrics_response = requests.get(
+            f"{API_URL}/model_metrics",
+            params={"model_name": selected_model},
+            headers=headers
         )
-    )
+        
+        if metrics_response.status_code == 200:
+            model_metrics = metrics_response.json()
+            
+            # Model performance metrics
+            st.subheader("Performance Metrics")
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            col1.metric("RMSE", f"{model_metrics.get('rmse', 0):.2f}", model_metrics.get('rmse_change'))
+            col2.metric("MAE", f"{model_metrics.get('mae', 0):.2f}", model_metrics.get('mae_change'))
+            col3.metric("MAPE", f"{model_metrics.get('mape', 0):.1f}%", model_metrics.get('mape_change'))
+            col4.metric("R²", f"{model_metrics.get('r2', 0):.2f}", model_metrics.get('r2_change'))
+        else:
+            st.warning("Unable to fetch model metrics from API.")
+            # Don't show metrics if unable to fetch real ones
+    except Exception as e:
+        st.warning(f"Error fetching model metrics: {str(e)}")
     
-    fig.add_trace(
-        go.Scatter(
-            x=drift_df['date'],
-            y=drift_df['data_drift_score'],
-            mode='lines',
-            name='Data Drift',
-            line=dict(color='red')
+    # Get real feature importance from API
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        feat_imp_response = requests.get(
+            f"{API_URL}/feature_importance",
+            params={"model_name": selected_model},
+            headers=headers
         )
-    )
+        
+        if feat_imp_response.status_code == 200:
+            feature_imp_data = feat_imp_response.json()
+            
+            # Feature importance
+            st.subheader("Feature Importance")
+            
+            # Create dataframe for chart
+            feat_imp = pd.DataFrame(feature_imp_data)
+            
+            # Create horizontal bar chart
+            fig = px.bar(
+                feat_imp.sort_values('importance', ascending=True), 
+                y='feature', 
+                x='importance',
+                orientation='h',
+                title="Feature Importance",
+                height=500,
+                color='importance',
+                color_continuous_scale='Viridis'
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Unable to fetch feature importance data from API.")
+    except Exception as e:
+        st.warning(f"Error fetching feature importance: {str(e)}")
     
-    # Add threshold line
-    fig.add_shape(
-        type="line",
-        x0=drift_df['date'].min(),
-        y0=0.2,
-        x1=drift_df['date'].max(),
-        y1=0.2,
-        line=dict(
-            color="Red",
-            width=2,
-            dash="dash",
+    # Show model drift
+    st.subheader("Model Drift")
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        drift_response = requests.get(
+            f"{API_URL}/model_drift",
+            params={"model_name": selected_model, "days": 7},
+            headers=headers
         )
-    )
-    
-    fig.update_layout(
-        title="Model Drift Over Time",
-        xaxis_title="Date",
-        yaxis_title="Score",
-        height=400
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Alert based on drift
-    if drift_df['data_drift_score'].iloc[-1] > 0.2:
-        st.warning("⚠️ Data drift detected! Model retraining recommended.")
-    else:
-        st.success("✅ No significant data drift detected. Model is performing well.")
+        
+        if drift_response.status_code == 200:
+            drift_data = drift_response.json()
+            
+            # Check if we have data
+            if drift_data and "dates" in drift_data and len(drift_data["dates"]) > 0:
+                # Create a DataFrame for plotting
+                drift_df = pd.DataFrame({
+                    "date": drift_data["dates"],
+                    "rmse": drift_data["rmse"],
+                    "mae": drift_data["mae"],
+                    "drift_score": drift_data["drift_score"]
+                })
+                
+                # Plot drift metrics
+                fig = make_subplots(rows=2, cols=1, 
+                                    subplot_titles=("Model Metrics Over Time", "Drift Score"),
+                                    vertical_spacing=0.1)
+                
+                # Add RMSE trace
+                fig.add_trace(
+                    go.Scatter(x=drift_df["date"], y=drift_df["rmse"], name="RMSE"),
+                    row=1, col=1
+                )
+                
+                # Add MAE trace
+                fig.add_trace(
+                    go.Scatter(x=drift_df["date"], y=drift_df["mae"], name="MAE"),
+                    row=1, col=1
+                )
+                
+                # Add Drift Score trace
+                fig.add_trace(
+                    go.Bar(x=drift_df["date"], y=drift_df["drift_score"], name="Drift Score (%)"),
+                    row=2, col=1
+                )
+                
+                fig.update_layout(height=600)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No drift data available for the selected model.")
+        else:
+            st.warning(f"Failed to fetch model drift data: {drift_response.status_code} - {drift_response.text}")
+    except Exception as e:
+        st.warning(f"Error fetching model drift data: {str(e)}")
+        st.info("Model drift monitoring is not available at this time.")
 
 def render_settings():
     """
@@ -895,4 +978,4 @@ def main():
             render_settings()
 
 if __name__ == "__main__":
-    main() 
+    main() # timestamp: 1746712458.8450198

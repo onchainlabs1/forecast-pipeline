@@ -1,17 +1,46 @@
 #!/bin/bash
 
-# Script to start the Streamlit dashboard for sales forecasting
+# Script to start both the API and the Streamlit dashboard
 
-echo "Starting Streamlit Dashboard..."
+echo "Starting the Sales Forecasting Application..."
 
-# Ensure required packages are installed
-echo "Checking dependencies..."
-pip install -r requirements.txt
+# Check if API is already running on port 8000
+if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null ; then
+    echo "API already running on port 8000"
+else
+    echo "Starting the API server..."
+    # Start API in the background
+    python src/api/main.py &
+    API_PID=$!
+    echo "API started with PID: $API_PID"
+    
+    # Wait for API to be ready
+    echo "Waiting for API to be ready..."
+    for i in {1..10}; do
+        if curl -s http://localhost:8000/health | grep -q "healthy"; then
+            echo "API is ready!"
+            break
+        fi
+        
+        if [ $i -eq 10 ]; then
+            echo "API failed to start properly. Please check the logs."
+            kill $API_PID
+            exit 1
+        fi
+        
+        echo "Waiting for API... ($i/10)"
+        sleep 2
+    done
+fi
 
-# Define environment variables if needed
-export API_URL=http://localhost:8000
-export MLFLOW_URL=http://localhost:5000
+# Start Streamlit dashboard
+echo "Starting Streamlit dashboard..."
+streamlit run src/dashboard/app.py
 
-# Run the Streamlit app
-echo "Launching dashboard..."
-streamlit run src/dashboard/app.py --server.port 8501 --browser.serverAddress localhost 
+# When the Streamlit dashboard is closed, check if we need to cleanup the API process
+if [ -n "$API_PID" ]; then
+    echo "Stopping API process with PID: $API_PID"
+    kill $API_PID
+fi
+
+echo "Application shutdown complete." 

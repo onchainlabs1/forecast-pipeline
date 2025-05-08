@@ -215,48 +215,103 @@ class ModelExplainer:
         explanation : dict
             Dictionary with the prediction explanations.
         """
-        if self.explainer is None:
-            logger.warning("SHAP explainer not initialized")
-            raise ValueError("SHAP explainer not initialized. Call create_explainer first.")
-        
-        logger.info("Explaining prediction for specific instance")
-        
-        # Convert to DataFrame if needed
-        if isinstance(instance, pd.Series):
-            instance = instance.to_frame().T
-        elif isinstance(instance, np.ndarray):
-            if instance.ndim == 1:
-                instance = pd.DataFrame([instance], columns=feature_names or self.feature_names)
-            else:
-                instance = pd.DataFrame(instance, columns=feature_names or self.feature_names)
-        
-        # Calculate SHAP values
-        shap_values = self.explainer(instance)
-        
-        # Generate explanation
-        feature_names = instance.columns
-        base_value = shap_values.base_values[0]
-        shap_values_array = shap_values.values[0]
-        
-        # Sort by magnitude
-        idx = np.argsort(np.abs(shap_values_array))[::-1]
-        
-        # Create dictionary with explanations
-        explanation = {
-            "base_value": float(base_value),
-            "prediction": float(base_value + np.sum(shap_values_array)),
-            "feature_contributions": [
-                {
+        try:
+            if self.explainer is None:
+                logger.warning("SHAP explainer not initialized")
+                return self._generate_fallback_explanation(instance, feature_names)
+            
+            # Convert instance to numpy array if it's a pandas Series
+            if isinstance(instance, pd.Series):
+                if feature_names is None:
+                    feature_names = instance.index.tolist()
+                instance = instance.values.reshape(1, -1)
+            elif isinstance(instance, np.ndarray):
+                instance = instance.reshape(1, -1)
+            
+            # Get SHAP values
+            shap_values = self.explainer.shap_values(instance)
+            
+            # Get the base value (expected value)
+            expected_value = self.explainer.expected_value
+            if isinstance(expected_value, list):
+                expected_value = expected_value[0]
+            
+            # Create a dataframe with feature contributions
+            feature_contributions = []
+            
+            # Use provided feature names or default ones
+            if feature_names is None:
+                if hasattr(self.model, 'feature_names_'):
+                    feature_names = self.model.feature_names_
+                else:
+                    feature_names = [f"feature_{i}" for i in range(instance.shape[1])]
+            
+            # Create feature contribution objects
+            for i in range(len(feature_names)):
+                contribution = float(shap_values[0][i])
+                feature_contributions.append({
                     "feature": feature_names[i],
-                    "contribution": float(shap_values_array[i]),
-                    "value": float(instance.iloc[0, i])
-                }
-                for i in idx
-            ]
-        }
+                    "value": float(instance[0][i]),
+                    "contribution": contribution
+                })
+            
+            # Sort by absolute contribution
+            feature_contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
+            
+            return {
+                "expected_value": float(expected_value),
+                "feature_contributions": feature_contributions
+            }
+        except Exception as e:
+            logger.error(f"Error creating SHAP explainer: {e}")
+            return self._generate_fallback_explanation(instance, feature_names)
+            
+    def _generate_fallback_explanation(self, instance, feature_names=None):
+        """
+        Generates a fallback explanation when SHAP cannot be used.
         
-        logger.info("Prediction explanation generated successfully")
-        return explanation
+        Returns a simpler explanation based on feature values.
+        """
+        # Generate feature names if not provided
+        if feature_names is None:
+            if hasattr(self.model, 'feature_names_'):
+                feature_names = self.model.feature_names_
+            else:
+                if isinstance(instance, pd.Series):
+                    feature_names = instance.index.tolist()
+                else:
+                    feature_names = [f"feature_{i}" for i in range(len(instance))]
+        
+        # Convert instance to a Series if it's not already
+        if not isinstance(instance, pd.Series):
+            instance = pd.Series(instance, index=feature_names)
+        
+        # Create a mock explanation based on feature magnitudes
+        # This is just a heuristic approach when SHAP is not available
+        values = instance.values
+        contributions = np.abs(values) / np.sum(np.abs(values)) * np.sign(values)
+        
+        # Create feature contribution objects
+        feature_contributions = []
+        for i in range(len(feature_names)):
+            value = float(values[i])
+            # Generate a reasonable "contribution" based on feature value
+            contribution = float(contributions[i])
+            feature_contributions.append({
+                "feature": feature_names[i],
+                "value": value,
+                "contribution": contribution
+            })
+        
+        # Sort by absolute contribution
+        feature_contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
+        
+        return {
+            "expected_value": float(np.mean(values)),
+            "feature_contributions": feature_contributions,
+            "fallback_explanation": True,
+            "explanation_type": "feature_magnitude_based"
+        }
     
     def generate_explanation_report(self, X, output_dir=None):
         """
