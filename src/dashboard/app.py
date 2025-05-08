@@ -29,7 +29,7 @@ sys.path.insert(0, str(project_root))
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 MLFLOW_URL = os.getenv("MLFLOW_URL", "http://localhost:5000")
 
-# Configure page
+# Configure page with dark theme
 st.set_page_config(
     page_title="Store Sales Forecast Dashboard",
     page_icon="📊",
@@ -37,7 +37,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Configurar tema escuro
+# Force dark mode
 st.markdown("""
 <style>
 :root {
@@ -45,6 +45,40 @@ st.markdown("""
     --secondary-background-color: #262730;
     --primary-color: #ff4b4b;
     --text-color: #fafafa;
+    color-scheme: dark;
+}
+
+/* Override Streamlit default styles to force dark theme */
+.stApp {
+    background-color: #0e1117 !important;
+    color: #fafafa !important;
+}
+
+.st-bq {
+    background-color: #262730 !important;
+}
+
+.stTextInput input, .stNumberInput input, .stDateInput input {
+    background-color: #262730 !important;
+    color: #fafafa !important;
+}
+
+.stSelectbox select, .stMultiSelect select {
+    background-color: #262730 !important;
+    color: #fafafa !important;
+}
+
+/* Make metric values more visible in dark mode */
+[data-testid="stMetricValue"] {
+    color: #fafafa !important;
+    font-weight: bold !important;
+    font-size: 1.5rem !important;
+}
+
+/* Make warning messages more visible */
+.stAlert {
+    background-color: #473a11 !important;
+    color: #fbcf61 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -91,6 +125,23 @@ def get_prediction(token, store_nbr, family, onpromotion, date):
     Get a sales prediction from the API.
     """
     try:
+        # If store_nbr is a string like "Store data" or "Store 1", extract the number
+        if isinstance(store_nbr, str):
+            if store_nbr.lower().startswith("store"):
+                parts = store_nbr.split()
+                if len(parts) > 1:
+                    try:
+                        store_nbr = int(parts[1])
+                    except ValueError:
+                        # Default to store 1 if conversion fails
+                        store_nbr = 1
+            else:
+                # Try to convert directly, or use default
+                try:
+                    store_nbr = int(store_nbr)
+                except ValueError:
+                    store_nbr = 1
+        
         headers = {"Authorization": f"Bearer {token}"}
         response = requests.get(
             f"{API_URL}/predict_single",
@@ -105,12 +156,20 @@ def get_prediction(token, store_nbr, family, onpromotion, date):
         
         if response.status_code == 200:
             result = response.json()
-            # Garantir que sempre temos a chave 'prediction'
+            # Ensure we always have the 'prediction' key
             if 'predicted_sales' in result and 'prediction' not in result:
                 result['prediction'] = result['predicted_sales']
             return result
         else:
-            st.error(f"Prediction failed: {response.json().get('detail', 'Unknown error')}")
+            error_details = ""
+            try:
+                error_data = response.json()
+                if "detail" in error_data:
+                    error_details = error_data["detail"]
+            except:
+                error_details = response.text
+                
+            st.error(f"Prediction failed: {error_details}")
             return None
     except Exception as e:
         st.error(f"Error connecting to API: {str(e)}")
@@ -160,30 +219,57 @@ def get_stores():
     Get a list of stores from the API.
     """
     try:
+        # Get stores from API
         response = requests.get(f"{API_URL}/stores")
         if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"Failed to fetch stores: {response.status_code} - {response.text}")
-            return []
+            data = response.json()
+            
+            # Check if we have the data in a nested structure
+            if isinstance(data, dict) and "data" in data:
+                stores_list = data["data"]
+            else:
+                stores_list = data
+                
+            # Ensure we have a list of integers
+            if isinstance(stores_list, list):
+                # Format each store number
+                return [f"Store {int(store)}" for store in stores_list if str(store).isdigit()]
+            
+        # Fallback stores if API call failed or returned invalid data
+        return [f"Store {i}" for i in range(1, 11)]
     except Exception as e:
-        st.error(f"Error fetching stores: {str(e)}")
-        return []
+        # Log the error but don't show to user
+        print(f"Error fetching stores: {str(e)}")
+        # Fallback stores if API connection fails
+        return [f"Store {i}" for i in range(1, 11)]
 
 def get_families():
     """
     Get a list of product families from the API.
     """
     try:
+        # Get families from API
         response = requests.get(f"{API_URL}/families")
         if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"Failed to fetch product families: {response.status_code} - {response.text}")
-            return []
+            data = response.json()
+            
+            # Check if we have the data in a nested structure
+            if isinstance(data, dict) and "data" in data:
+                families_list = data["data"]
+            else:
+                families_list = data
+                
+            # Ensure we have a valid list of strings
+            if isinstance(families_list, list) and all(isinstance(f, str) for f in families_list):
+                return [f for f in families_list if f and not f.lower() == "data"]
+            
+        # Default families if API returns invalid data
+        return ["PRODUCE", "GROCERY I", "DAIRY", "BEVERAGES", "BREAD/BAKERY"]
     except Exception as e:
-        st.error(f"Error fetching product families: {str(e)}")
-        return []
+        # Log the error but don't show to user
+        print(f"Error fetching product families: {str(e)}")
+        # Default families if API connection fails
+        return ["PRODUCE", "GROCERY I", "DAIRY", "BEVERAGES", "BREAD/BAKERY"]
 
 def get_sales_data(token, store_nbr, family, days=90):
     """
@@ -202,7 +288,21 @@ def get_sales_data(token, store_nbr, family, days=90):
         )
         
         if response.status_code == 200:
-            data = response.json()
+            response_data = response.json()
+            
+            # Handle both old and new response formats
+            if isinstance(response_data, dict) and "data" in response_data:
+                # New format with metadata
+                data = response_data["data"]
+                
+                # Show warning if mock data
+                if response_data.get("is_mock_data", False):
+                    message = response_data.get("message", "WARNING: Using simulated sales data")
+                    st.warning(message, icon="⚠️")
+            else:
+                # Old format (direct array)
+                data = response_data
+            
             return pd.DataFrame(data)
         else:
             st.error(f"Failed to fetch sales data: {response.status_code} - {response.text}")
@@ -223,7 +323,14 @@ def get_metric_summary(token):
         )
         
         if response.status_code == 200:
-            return response.json()
+            data = response.json()
+            
+            # Check if data is mock and show warning
+            if data.get("is_mock_data", False):
+                message = data.get("message", "WARNING: Using simulated data")
+                st.warning(message, icon="⚠️")
+                
+            return data
         else:
             st.error(f"Failed to fetch metrics: {response.status_code} - {response.text}")
             return None
@@ -309,203 +416,311 @@ def render_sidebar():
     st.sidebar.markdown("[MLflow Dashboard](%s)" % MLFLOW_URL)
     st.sidebar.markdown("[API Documentation](%s/docs)" % API_URL)
 
-def render_dashboard():
-    """
-    Render the main dashboard with real data.
-    """
-    st.title("Store Sales Forecast Dashboard")
+def display_sales_history(store_nbr, family, days):
+    try:
+        # Get sales history data from API
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        response = requests.get(
+            f"{API_URL}/sales_history?store_nbr={store_nbr}&family={family}&days={days}",
+            headers=headers
+        )
+        
+        if response.status_code != 200:
+            st.warning(f"No sales history data available for Store {store_nbr}, {family}")
+            return
+        
+        # Get the data from the response
+        try:
+            history_data = response.json()
+        except Exception as e:
+            st.error(f"Error parsing response data: {str(e)}")
+            return
+        
+        # Check if the data is from the API's 'data' field (new format)
+        if isinstance(history_data, dict) and 'data' in history_data:
+            # New format with metadata
+            data = history_data['data']
+            is_mock = history_data.get('is_mock_data', False)
+            message = history_data.get('message', None)
+        else:
+            # Old format (just a list of records)
+            data = history_data
+            is_mock = False
+            message = None
+        
+        if not data or not isinstance(data, list) or len(data) == 0:
+            st.warning(f"No sales history data available for Store {store_nbr}, {family}")
+            return
+        
+        # Create DataFrame for plotting, handling potential data issues
+        valid_records = []
+        for record in data:
+            try:
+                # Validate and convert data
+                if not isinstance(record, dict):
+                    continue
+                    
+                date_val = record.get('date')
+                sales_val = record.get('sales')
+                is_promotion = record.get('is_promotion', 0)
+                
+                if date_val is None or sales_val is None:
+                    continue
+                    
+                # Try to convert sales to float
+                try:
+                    sales_val = float(sales_val)
+                except (ValueError, TypeError):
+                    # Skip if sales cannot be converted to float
+                    continue
+                
+                # Add to valid records
+                valid_records.append({
+                    'date': date_val,
+                    'sales': sales_val,
+                    'is_promotion': int(is_promotion) if is_promotion is not None else 0
+                })
+            except Exception:
+                # Skip any record that causes errors
+                continue
+        
+        if not valid_records:
+            st.warning(f"No valid sales history data available for Store {store_nbr}, {family}")
+            return
+            
+        # Create dataframe from valid records
+        df = pd.DataFrame(valid_records)
+        
+        # Try to convert date column to datetime
+        try:
+            df['date'] = pd.to_datetime(df['date'])
+            # Sort by date
+            df = df.sort_values('date')
+        except Exception as date_error:
+            st.warning(f"Error processing date values: {str(date_error)}")
+            # If date conversion fails, we can still try to display the data
+        
+        # Only show warning if explicitly marked as mock data and has a message
+        if is_mock and message:
+            st.warning(message)
+        
+        # Display the sales trend chart
+        title = f"Sales Trend for Store {store_nbr} - {family}"
+        st.subheader(title)
+        
+        # Create Plotly figure with promotions
+        fig = make_subplots()
+        
+        # Add sales line
+        fig.add_trace(
+            go.Scatter(
+                x=df['date'], 
+                y=df['sales'], 
+                mode='lines', 
+                name='Sales',
+                line=dict(color='#3366CC', width=2)
+            )
+        )
+        
+        # Add markers for promotions if available
+        if 'is_promotion' in df.columns:
+            # Filter only dates with promotions
+            promo_df = df[df['is_promotion'] == 1]
+            if not promo_df.empty:
+                fig.add_trace(
+                    go.Scatter(
+                        x=promo_df['date'], 
+                        y=promo_df['sales'], 
+                        mode='markers', 
+                        name='Promotions',
+                        marker=dict(color='red', size=8, symbol='circle')
+                    )
+                )
+        
+        # Update layout
+        fig.update_layout(
+            title=None,
+            xaxis_title='Date',
+            yaxis_title='Sales ($)',
+            template='plotly_dark',
+            height=400,
+            margin=dict(l=10, r=10, t=30, b=10),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"Error displaying sales history: {str(e)}")
+
+def display_dashboard():
+    st.header("Store Sales Forecast Dashboard")
     
-    # Check API health
-    health = get_health()
-    if health["status"] != "healthy":
-        st.error(f"API is not available: {health.get('message', 'Unknown error')}")
-        st.warning("Please make sure the API is running before using the dashboard.")
-        st.stop()
-    
-    # Get real metrics if authenticated
-    metrics = None
-    if "token" in st.session_state:
-        metrics = get_metric_summary(st.session_state.token)
-    
-    if not metrics:
-        st.error("Unable to load metrics data. Please log in and ensure API connection is working.")
-        st.stop()
-    
-    # Summary metrics
+    # Display KPIs
     col1, col2, col3, col4 = st.columns(4)
     
-    col1.metric("Total Stores", f"{metrics['total_stores']}", None)
-    col2.metric("Total Products", f"{metrics['total_families']} families", None)
-    col3.metric("Average Sales", f"${metrics['avg_sales']:.2f}", None)
-    col4.metric("Forecast Accuracy", f"{metrics['forecast_accuracy']:.1f}%", None)
+    try:
+        # Get metrics from API
+        metrics = get_metric_summary(st.session_state.token)
+        
+        with col1:
+            st.metric("Total Stores", str(metrics.get("total_stores", "N/A")))
+            
+        with col2:
+            total_families = metrics.get("total_families", "N/A")
+            if isinstance(total_families, (int, float)):
+                total_families_str = f"{total_families} families"
+            else:
+                total_families_str = "N/A"
+            st.metric("Total Products", total_families_str)
+            
+        with col3:
+            avg_sales = metrics.get("avg_sales", 0)
+            if isinstance(avg_sales, (int, float)):
+                formatted_avg = f"${avg_sales:.2f}"
+            else:
+                formatted_avg = "N/A"
+            st.metric("Average Sales", formatted_avg)
+            
+        with col4:
+            accuracy = metrics.get("forecast_accuracy", 0)
+            if isinstance(accuracy, (int, float)):
+                accuracy_str = f"{accuracy:.1f}%"
+            else:
+                accuracy_str = "N/A"
+            st.metric("Forecast Accuracy", accuracy_str)
+    except Exception as e:
+        st.error(f"Error loading metrics: {str(e)}")
+        # Use fallback values if API call fails
+        with col1:
+            st.metric("Total Stores", "N/A")
+        with col2:
+            st.metric("Total Products", "N/A")
+        with col3:
+            st.metric("Average Sales", "N/A")
+        with col4:
+            st.metric("Forecast Accuracy", "N/A")
     
-    # Get stores and families from API
-    stores = get_stores()
-    families = get_families()
-    
-    if not stores or not families:
-        st.error("Failed to load store or product family data from API.")
-        st.stop()
-    
-    # Filter controls
+    # Dashboard Filters
     st.subheader("Filters")
     col1, col2, col3 = st.columns(3)
     
-    # Default values we know that work
-    default_store_index = 0
-    default_family_index = 0
-    
-    # Stores and families we know have data
-    good_combinations = [
-        {"store": 1, "family": "PRODUCE"},
-        {"store": 1, "family": "FROZEN FOODS"},
-        {"store": 1, "family": "GROCERY II"},
-        {"store": 1, "family": "LIQUOR,WINE,BEER"},
-        {"store": 1, "family": "HOME APPLIANCES"}
-    ]
-    
-    # Try to find default values in the stores and families lists
-    if stores and families:
-        # Look for store 1 in the stores list
-        if 1 in stores:
-            default_store_index = stores.index(1)
-            
-        # Look for "PRODUCE" in the families list
-        for good_family in ["PRODUCE", "FROZEN FOODS", "GROCERY II", "LIQUOR,WINE,BEER", "HOME APPLIANCES"]:
-            if good_family in families:
-                default_family_index = families.index(good_family)
-                break
-    
     with col1:
-        store = st.selectbox("Store", stores, index=default_store_index) if stores else st.text_input("Store Number")
+        st.markdown("Store")
+        # Get store options and filter out invalid ones
+        store_options = get_stores()
+        store_options = [s for s in store_options if not s.lower().endswith("data")]
+        if not store_options:
+            store_options = [f"Store {i}" for i in range(1, 11)]
+        
+        store_filter = st.selectbox("", options=store_options, index=0, key="dashboard_store")
+    
     with col2:
-        family = st.selectbox("Product Family", families, index=default_family_index) if families else st.text_input("Product Family")
+        st.markdown("Product Family")
+        # Get family options and filter out invalid ones
+        family_options = get_families()
+        family_options = [f for f in family_options if f.lower() != "data"]
+        if not family_options:
+            family_options = ["PRODUCE", "GROCERY I", "DAIRY", "BEVERAGES", "BREAD/BAKERY"]
+            
+        family_filter = st.selectbox("", options=family_options, index=0, key="dashboard_family")
+    
     with col3:
-        days = st.slider("Days to Display", 30, 365, 90)
+        st.markdown("Days to Display")
+        days_filter = st.slider("", min_value=30, max_value=365, value=90)
     
-    # Get sales data - must have auth token
-    if "token" not in st.session_state:
-        st.error("Please log in to view sales data.")
-        st.stop()
-    
-    # Try to get data for the selected combination
-    sales_data = get_sales_data(st.session_state.token, store, family, days)
-    
-    # If no data found, try the known good combinations
-    if sales_data.empty:
-        st.warning(f"No data found for Store {store}, Family {family}. Trying to find combinations with data...")
-        
-        found_data = False
-        for combo in good_combinations:
-            st.info(f"Trying Store {combo['store']}, Family {combo['family']}...")
-            test_data = get_sales_data(st.session_state.token, combo['store'], combo['family'], days)
-            
-            if not test_data.empty:
-                st.success(f"Data found for Store {combo['store']}, Family {combo['family']}!")
-                sales_data = test_data
-                store = combo['store']
-                family = combo['family']
-                found_data = True
-                break
-        
-        # If still no data found, show error
-        if not found_data:
-            st.error("Could not find data for any known combination.")
-            
-            # Suggest combinations that should work
-            st.markdown("### Suggested Combinations with Data")
-            st.markdown("The following combinations should have data. Verify that the families are exactly as shown below:")
-            
-            for combo in good_combinations:
-                st.markdown(f"- Store **{combo['store']}** with family **{combo['family']}**")
-            
-            st.stop()
-    
-    # Time series chart
-    st.subheader("Sales Trends")
-    
-    # Create a time series chart
-    fig = px.line(
-        sales_data, 
-        x='date', 
-        y='sales',
-        title=f"Sales Trend for Store {store} - {family}",
-        height=400
-    )
-    
-    # Add markers for promotions if available
-    if 'is_promotion' in sales_data.columns:
-        promo_data = sales_data[sales_data['is_promotion'] == 1]
-        fig.add_trace(
-            go.Scatter(
-                x=promo_data['date'],
-                y=promo_data['sales'],
-                mode='markers',
-                marker=dict(size=10, color='red'),
-                name='Promotions'
-            )
-        )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Get real comparison data from API
+    # Extract store number from formatted string
     try:
-        headers = {"Authorization": f"Bearer {st.session_state.token}"}
-        compare_response = requests.get(
-            f"{API_URL}/store_comparison",
-            headers=headers
-        )
-        
-        if compare_response.status_code == 200:
-            store_perf = pd.DataFrame(compare_response.json())
-            
-            # Create bar chart
-            fig = px.bar(
-                store_perf, 
-                x='store', 
-                y='sales',
-                color='forecast_accuracy',
-                color_continuous_scale='Viridis',
-                title="Sales by Store",
-                height=400
-            )
-            
-            st.subheader("Store Comparison")
-            st.plotly_chart(fig, use_container_width=True)
+        # Try to extract a number from the store string
+        store_parts = store_filter.split()
+        if len(store_parts) > 1 and store_parts[0].lower() == "store":
+            try:
+                store_nbr = int(store_parts[1])
+            except ValueError:
+                # If conversion fails, use a default value
+                store_nbr = 1
         else:
-            st.warning("Unable to load store comparison data.")
-    except Exception as e:
-        st.warning(f"Error loading store comparison: {str(e)}")
+            # Default if the format is unexpected
+            store_nbr = 1
+    except Exception:
+        # Fallback value
+        store_nbr = 1
     
-    # Get real product family performance from API  
+    # Display visualization based on filters
+    display_sales_history(store_nbr, family_filter, days_filter)
+    
+    # Show additional metrics/charts
     try:
+        # Get store comparison data
         headers = {"Authorization": f"Bearer {st.session_state.token}"}
-        family_response = requests.get(
-            f"{API_URL}/family_performance",
-            headers=headers
-        )
+        response = requests.get(f"{API_URL}/store_comparison", headers=headers)
         
-        if family_response.status_code == 200:
-            family_perf = pd.DataFrame(family_response.json())
+        if response.status_code == 200:
+            store_data = response.json()
             
-            # Create horizontal bar chart
-            fig = px.bar(
-                family_perf.sort_values('sales', ascending=True), 
-                y='family', 
-                x='sales',
-                color='growth',
-                color_continuous_scale='RdYlGn',
-                title="Sales by Product Family",
-                orientation='h',
-                height=500
-            )
-            
-            st.subheader("Product Family Performance")
-            st.plotly_chart(fig, use_container_width=True)
+            if store_data:
+                st.subheader("Sales Trends")
+                
+                # Handle potential data issues
+                valid_data = []
+                for item in store_data:
+                    try:
+                        # Ensure all required fields are present and of the correct type
+                        store_name = item.get('store', f"Store {len(valid_data)+1}")
+                        sales_value = float(item.get('sales', 0))
+                        forecast_accuracy = float(item.get('forecast_accuracy', 0.8))
+                        
+                        valid_data.append({
+                            'store': store_name,
+                            'sales': sales_value,
+                            'forecast_accuracy': forecast_accuracy
+                        })
+                    except (ValueError, TypeError):
+                        # Skip invalid entries
+                        continue
+                
+                if valid_data:
+                    # Create DataFrame from valid data
+                    df_stores = pd.DataFrame(valid_data)
+                    
+                    # Sort by sales in descending order
+                    df_stores = df_stores.sort_values(by='sales', ascending=False)
+                    
+                    # Create comparison bar chart
+                    fig = px.bar(
+                        df_stores, 
+                        x='store', 
+                        y='sales',
+                        color='forecast_accuracy', 
+                        color_continuous_scale='Viridis',
+                        labels={'sales': 'Total Sales ($)', 'store': 'Store', 'forecast_accuracy': 'Forecast Accuracy'},
+                        title=f"Sales Trend for Store {store_nbr} - {family_filter}",
+                    )
+                    
+                    # Update layout for dark theme
+                    fig.update_layout(
+                        template='plotly_dark',
+                        coloraxis_colorbar=dict(title="Accuracy"),
+                        title=None,
+                        height=400,
+                        margin=dict(l=10, r=10, t=30, b=10)
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning("No valid data available for store comparison chart")
+            else:
+                st.warning("No data available for store comparison")
         else:
-            st.warning("Unable to load product family performance data.")
+            st.warning(f"Failed to fetch store comparison data: {response.status_code}")
     except Exception as e:
-        st.warning(f"Error loading product family performance: {str(e)}")
+        st.error(f"Error loading store comparison: {str(e)}")
 
 def render_predictions():
     """
@@ -528,9 +743,21 @@ def render_predictions():
     stores = get_stores()
     families = get_families()
     
-    if not stores or not families:
-        st.error("Failed to load store or product family data from API.")
-        st.stop()
+    # Filter out invalid options
+    stores = [s for s in stores if not s.lower().endswith("data")]
+    families = [f for f in families if f.lower() != "data"]
+    
+    if not stores:
+        # Ensure we have at least some valid stores
+        stores = [f"Store {i}" for i in range(1, 11)]
+    
+    if not families:
+        # Ensure we have at least some valid families
+        families = ["PRODUCE", "GROCERY I", "DAIRY", "BEVERAGES", "BREAD/BAKERY"]
+    
+    # Show advanced options
+    with st.expander("Prediction Options"):
+        enable_debug = st.checkbox("Show Debug Information", value=True)
     
     # Form for predictions
     with st.form("prediction_form"):
@@ -540,14 +767,16 @@ def render_predictions():
         default_store_index = 0
         default_family_index = 0
         
-        # Tenta encontrar os índices dos valores default nos stores e families
+        # Try to find default values in the stores and families lists
         if stores and families:
-            # Procura store 1 na lista de lojas
-            if 1 in stores:
-                default_store_index = stores.index(1)
+            # Look for store 1 in the stores list
+            for i, store in enumerate(stores):
+                if store.endswith("1"):
+                    default_store_index = i
+                    break
                 
-            # Procura "PRODUCE" na lista de famílias
-            for good_family in ["PRODUCE", "FROZEN FOODS", "GROCERY II", "LIQUOR,WINE,BEER", "HOME APPLIANCES"]:
+            # Look for "PRODUCE" in the families list
+            for good_family in ["PRODUCE", "FROZEN FOODS", "GROCERY I", "DAIRY"]:
                 if good_family in families:
                     default_family_index = families.index(good_family)
                     break
@@ -569,10 +798,25 @@ def render_predictions():
     if submitted:
         if "token" in st.session_state:
             with st.spinner("Getting prediction..."):
+                # Extract store number from string (if needed)
+                store_val = 1  # Default value
+                
+                try:
+                    if isinstance(store_nbr, str) and "store" in store_nbr.lower():
+                        # Format is like "Store 1" - extract the number
+                        parts = store_nbr.split()
+                        if len(parts) > 1 and parts[1].isdigit():
+                            store_val = int(parts[1])
+                    elif isinstance(store_nbr, (int, float)):
+                        store_val = int(store_nbr)
+                except (ValueError, TypeError):
+                    # If conversion fails, use store 1
+                    store_val = 1
+                
                 # Make prediction request
                 prediction = get_prediction(
                     st.session_state.token,
-                    store_nbr,
+                    store_val,
                     family,
                     onpromotion,
                     date.strftime("%Y-%m-%d")
@@ -580,7 +824,11 @@ def render_predictions():
                 
                 if prediction:
                     # Show prediction results
-                    st.success("Prediction successful!")
+                    st.success("Prediction request successful!")
+                    
+                    # Check if this is a fallback prediction
+                    is_fallback = prediction.get('is_fallback', False)
+                    saved_to_db = prediction.get('saved_to_db', False)
                     
                     # Format prediction
                     st.subheader("Prediction Results")
@@ -598,14 +846,43 @@ def render_predictions():
                             st.error("Prediction data format is invalid. Missing prediction value.")
                             prediction_value = 0
                             
-                        st.metric(
-                            "Predicted Sales", 
-                            f"${prediction_value:.2f}",
-                            delta=None
-                        )
+                        # Estiliza de forma diferente caso seja fallback
+                        if is_fallback:
+                            message = prediction.get('message', 'WARNING: Using simulated prediction (fallback)')
+                            st.warning(message, icon="⚠️")
+                            
+                            st.markdown(f"""
+                            <div style="padding: 10px; background-color: #fff3cd; border-radius: 5px; border: 1px solid #ffeeba;">
+                                <h3 style="color: #856404; margin: 0;">Predicted Sales (SIMULATED)</h3>
+                                <p style="font-size: 24px; font-weight: bold; margin: 0; color: #856404;">${prediction_value:.2f}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Show error details if debug is enabled
+                            if enable_debug and 'error' in prediction:
+                                st.error(f"Model Error: {prediction['error']}")
+                        else:
+                            st.success("REAL MODEL PREDICTION", icon="✅")
+                            st.metric(
+                                "Predicted Sales (REAL)", 
+                                f"${prediction_value:.2f}",
+                                delta=None
+                            )
+                            
+                            # Show if prediction was saved to database
+                            if enable_debug:
+                                if saved_to_db:
+                                    st.success("✅ Prediction saved to database")
+                                else:
+                                    st.warning("⚠️ Prediction not saved to database")
+                    
+                    # Show raw prediction data in debug mode
+                    if enable_debug:
+                        with st.expander("Raw Prediction Data"):
+                            st.json(prediction)
                     
                     # Save prediction ID for explanation
-                    prediction_id = prediction.get('prediction_id', f"{store_nbr}-{family}-{date}")
+                    prediction_id = prediction.get('prediction_id', f"{store_val}-{family}-{date}")
                     
                     # Get explanation
                     with st.spinner("Generating explanation..."):
@@ -613,7 +890,7 @@ def render_predictions():
                             explanation = get_explanation(
                                 st.session_state.token,
                                 prediction_id,
-                                store_nbr,
+                                store_val,
                                 family,
                                 onpromotion,
                                 date.strftime("%Y-%m-%d")
@@ -621,6 +898,11 @@ def render_predictions():
                             
                             if explanation:
                                 st.subheader("Prediction Explanation")
+                                
+                                # Check for explanation message that might indicate it's a fallback
+                                exp_message = explanation.get("message", "")
+                                if "error" in exp_message.lower() or "not available" in exp_message.lower():
+                                    st.warning(exp_message, icon="⚠️")
                                 
                                 # Display feature contributions
                                 feature_contributions = explanation.get("feature_contributions", [])
@@ -654,66 +936,16 @@ def render_predictions():
                                     st.plotly_chart(fig, use_container_width=True)
                                 else:
                                     st.warning("Explanation available but no feature contributions found.")
+                                    
+                                # Show raw explanation in debug mode
+                                if enable_debug:
+                                    with st.expander("Raw Explanation Data"):
+                                        st.json(explanation)
                             else:
                                 st.warning("Unable to generate explanation for this prediction.")
                         except Exception as exp_error:
                             st.error(f"Error generating explanation: {str(exp_error)}")
                             st.warning("Unable to generate explanation for this prediction. Model may not support explainability.")
-                    
-                    # Historical context from real API data
-                    st.subheader("Historical Context")
-                    st.markdown("Here's how this prediction compares to historical sales:")
-                    
-                    # Get real historical data
-                    try:
-                        headers = {"Authorization": f"Bearer {st.session_state.token}"}
-                        hist_response = requests.get(
-                            f"{API_URL}/historical_sales",
-                            params={
-                                "store_nbr": store_nbr,
-                                "family": family,
-                                "days": 60
-                            },
-                            headers=headers
-                        )
-                        
-                        if hist_response.status_code == 200:
-                            hist_data = hist_response.json()
-                            hist_df = pd.DataFrame(hist_data)
-                            
-                            # Add the prediction point
-                            future_df = pd.DataFrame({
-                                'date': [date],
-                                'sales': [prediction_value]  # Usa o mesmo valor verificado anteriormente
-                            })
-                            
-                            # Plot
-                            fig = px.line(
-                                hist_df, 
-                                x='date', 
-                                y='sales',
-                                title=f"Historical Sales and Prediction for Store {store_nbr} - {family}",
-                                height=400
-                            )
-                            
-                            # Add the prediction point
-                            fig.add_trace(
-                                go.Scatter(
-                                    x=future_df['date'],
-                                    y=future_df['sales'],
-                                    mode='markers',
-                                    marker=dict(size=12, color='red'),
-                                    name='Prediction'
-                                )
-                            )
-                            
-                            st.plotly_chart(fig, use_container_width=True)
-                        else:
-                            st.warning("Unable to load historical data for comparison.")
-                    except Exception as e:
-                        st.warning(f"Error loading historical data: {str(e)}")
-        else:
-            st.error("Please login to make predictions.")
 
 def render_model_insights():
     """
@@ -991,7 +1223,7 @@ def main():
     else:
         # Render the appropriate page
         if st.session_state.page == "Dashboard":
-            render_dashboard()
+            display_dashboard()
         elif st.session_state.page == "Predictions":
             render_predictions()
         elif st.session_state.page == "Model Insights":
