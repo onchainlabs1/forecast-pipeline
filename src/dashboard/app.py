@@ -576,9 +576,19 @@ def render_predictions():
                     col1, col2 = st.columns(2)
                     
                     with col1:
+                        # Verifica qual chave está disponível
+                        prediction_value = None
+                        if 'prediction' in prediction:
+                            prediction_value = prediction['prediction']
+                        elif 'predicted_sales' in prediction:
+                            prediction_value = prediction['predicted_sales']
+                        else:
+                            st.error("Prediction data format is invalid. Missing prediction value.")
+                            prediction_value = 0
+                            
                         st.metric(
                             "Predicted Sales", 
-                            f"${prediction['prediction']:.2f}",
+                            f"${prediction_value:.2f}",
                             delta=None
                         )
                     
