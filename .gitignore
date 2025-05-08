@@ -39,7 +39,7 @@ data/*.csv
 data/*.parquet
 data/*.json
 
-# Large data files
+# Large data files (>100MB)
 data/raw/train.csv
 data/processed/train_features.csv
 data/processed/test_features.csv
