@@ -380,4 +380,57 @@ class ModelExplainer:
         pd.Series(report).to_json(report_path, orient="index")
         
         logger.info(f"Model explanation report saved to {report_path}")
-        return report 
+        return report
+
+def generate_explanation(model, instance, feature_names=None, background_data=None):
+    """
+    Generate explanation for a model prediction.
+    
+    This function creates a ModelExplainer and attempts to explain a prediction.
+    If SHAP explanation fails, it returns a fallback explanation.
+    
+    Parameters
+    ----------
+    model : object
+        The trained model to explain
+    instance : array-like
+        The input instance to explain
+    feature_names : list, optional
+        Names of the features
+    background_data : array-like, optional
+        Background data for SHAP explainer (needed for non-tree models)
+        
+    Returns
+    -------
+    dict
+        A dictionary containing the explanation
+    """
+    try:
+        # Create the explainer
+        logger.info("Creating SHAP explainer")
+        explainer = ModelExplainer(model=model, feature_names=feature_names)
+        
+        try:
+            # Create the SHAP explainer
+            explainer.create_explainer(data=background_data)
+            
+            # Generate the explanation
+            explanation = explainer.explain_prediction(instance, feature_names)
+            return explanation
+        
+        except ValueError as ve:
+            if "Background data needed" in str(ve):
+                logger.warning("Background data needed for non-tree-based model")
+                # Return a fallback explanation
+                return explainer._generate_fallback_explanation(instance, feature_names)
+            else:
+                raise ve
+                
+    except Exception as e:
+        logger.error(f"Error creating SHAP explainer: {e}")
+        # If we can't create the explainer, return a basic fallback
+        return {
+            "message": f"Cannot generate explanation: {str(e)}",
+            "fallback_explanation": True,
+            "feature_contributions": []
+        } 
