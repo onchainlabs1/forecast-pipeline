@@ -3,13 +3,15 @@ Module for authentication and authorization with JWT.
 """
 
 import os
+import base64
+import json
+import hmac
+import hashlib
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List, Union
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
 from pydantic import BaseModel
 
 # Security settings
@@ -37,7 +39,14 @@ class UserInDB(User):
     hashed_password: str
 
 # Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Simple password hashing function
+def get_password_hash(password: str) -> str:
+    """Generates a hash for the provided password."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verifies if the provided password matches the stored hash."""
+    return get_password_hash(plain_password) == hashed_password
 
 # OAuth2 with Bearer token
 oauth2_scheme = OAuth2PasswordBearer(
@@ -48,15 +57,6 @@ oauth2_scheme = OAuth2PasswordBearer(
         "admin": "Admin access"
     }
 )
-
-# Utility functions for authentication
-def verify_password(plain_password, hashed_password):
-    """Verifies if the provided password matches the stored hash."""
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password):
-    """Generates a hash for the provided password."""
-    return pwd_context.hash(password)
 
 # Simulated user database - in production, use a real database
 fake_users_db = {
@@ -93,6 +93,7 @@ def authenticate_user(db, username: str, password: str):
         return False
     return user
 
+# Simple JWT implementation
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None):
     """Creates a JWT access token."""
     to_encode = data.copy()
@@ -100,9 +101,58 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    to_encode.update({"exp": expire.timestamp()})
+    
+    # Convert payload to JSON
+    payload = json.dumps(to_encode).encode()
+    
+    # Create a simple JWT token (header.payload.signature)
+    header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).decode().rstrip("=")
+    payload_b64 = base64.urlsafe_b64encode(payload).decode().rstrip("=")
+    
+    # Create signature
+    signature = hmac.new(
+        SECRET_KEY.encode(),
+        f"{header}.{payload_b64}".encode(),
+        hashlib.sha256
+    ).digest()
+    signature_b64 = base64.urlsafe_b64encode(signature).decode().rstrip("=")
+    
+    # Return the JWT token
+    return f"{header}.{payload_b64}.{signature_b64}"
+
+# JWT token validation
+def decode_jwt(token: str) -> Dict[str, Any]:
+    """Decodes and validates a JWT token."""
+    try:
+        # Split the token into parts
+        header_b64, payload_b64, signature_b64 = token.split(".")
+        
+        # Add padding
+        def add_padding(s):
+            return s + "=" * (4 - len(s) % 4)
+        
+        # Verify signature
+        signature = base64.urlsafe_b64decode(add_padding(signature_b64))
+        expected_signature = hmac.new(
+            SECRET_KEY.encode(),
+            f"{header_b64}.{payload_b64}".encode(),
+            hashlib.sha256
+        ).digest()
+        
+        if not hmac.compare_digest(signature, expected_signature):
+            raise ValueError("Invalid signature")
+        
+        # Decode payload
+        payload = json.loads(base64.urlsafe_b64decode(add_padding(payload_b64)))
+        
+        # Check expiration
+        if "exp" in payload and payload["exp"] < datetime.utcnow().timestamp():
+            raise ValueError("Token expired")
+        
+        return payload
+    except Exception as e:
+        raise ValueError(f"Invalid token: {str(e)}")
 
 # Dependency for protected routes
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -113,13 +163,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = decode_jwt(token)
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
         token_scopes = payload.get("scopes", [])
         token_data = TokenData(username=username, scopes=token_scopes)
-    except JWTError:
+    except Exception:
         raise credentials_exception
     user = get_user(fake_users_db, username=token_data.username)
     if user is None:

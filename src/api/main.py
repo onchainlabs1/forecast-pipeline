@@ -20,7 +20,6 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
 import mlflow
 import uvicorn
-import sentry_sdk
 
 # Add project root to sys.path
 project_root = Path(__file__).parents[2]
@@ -47,15 +46,19 @@ PROJECT_DIR = Path(__file__).resolve().parents[2]
 MODELS_DIR = PROJECT_DIR / "models"
 MODEL_PATH = MODELS_DIR / "lightgbm_model.pkl"
 
-# Set up Sentry for error monitoring (opcional)
+# Set up Sentry for error monitoring (optional)
 SENTRY_DSN = os.getenv("SENTRY_DSN")
-if SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        traces_sample_rate=0.1,  # Ajuste conforme necessário
-        environment=os.getenv("ENVIRONMENT", "development"),
-    )
-    logger.info("Sentry initialized for error monitoring")
+try:
+    import sentry_sdk
+    if SENTRY_DSN:
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            traces_sample_rate=0.1,
+            environment=os.getenv("ENVIRONMENT", "development"),
+        )
+        logger.info("Sentry initialized for error monitoring")
+except ImportError:
+    logger.warning("Sentry SDK not installed. Error monitoring disabled.")
 
 # FastAPI app
 app = FastAPI(

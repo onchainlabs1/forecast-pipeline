@@ -1,0 +1,1 @@
+"""Model training and evaluation module for the store sales forecasting project.""" 

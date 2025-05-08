@@ -1,23 +1,8 @@
-# Data
-data/raw/
-data/processed/
-
-# Models
-models/
-mlruns/
-
-# Reports
-reports/
-
-# Byte-compiled / optimized / DLL files
+# Python files
 __pycache__/
 *.py[cod]
-*$py.class
-
-# C extensions
+*.class
 *.so
-
-# Distribution / packaging
 .Python
 env/
 build/
@@ -31,101 +16,40 @@ lib64/
 parts/
 sdist/
 var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
+# Virtual environments
+venv/
+ENV/
+.env
 
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Virtual environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+# Project specific
+mlruns/
+*.pkl
+logs/
+*.log
 
-# IDE specific files
+# Data (managed by DVC, if used)
+data/*.csv
+data/*.parquet
+data/*.json
+
+# IDE configurations
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# OS specific
 .DS_Store
-
-# Project specific
-data/raw/
-data/processed/
-models/*.pkl
-models/*.joblib
-models/binaries/
-mlruns/
-.dvc/cache/
-.dvc/tmp/
-.dvc/plots/
-logs/
-credentials/
-.env
-.env.*
-!.env.example
-
-# Docker specific
-.dockerignore
-docker-compose.override.yml
-
-# MLflow specific
-mlruns/
-mlflow.db
-
-# DVC specific
-/dvc_storage/
-
-# Node modules (if using JS tools)
-node_modules/
-
-# Large files
-*.csv
-*.parquet
-*.h5
-*.hdf5
-*.pickle
-*.bin
-*.pt
-*.onnx
-*.tar.gz
-*.zip
-
-# Monitoring data
-monitoring/data_drift/
-monitoring/performance/
-monitoring/alerts/
-monitoring/visualizations/
-
-# Feature store data
-feature_store/*.json
-feature_store/*.pkl
-
-# Kaggle credentials
-kaggle.json
-
-# Exclude specific data files we want to track with DVC
-!data/.gitkeep
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-
-# Production config may contain secrets
-config.production.yaml 
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

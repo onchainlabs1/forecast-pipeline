@@ -1,170 +1,120 @@
-# Store Sales Forecasting
+# Sales Forecasting MLOps Project
 
-A complete sales forecasting pipeline for multiple stores and products, integrating modern MLOps practices.
+## Overview
 
-## Objective
+This project implements a complete MLOps pipeline for store sales forecasting, including:
 
-Develop a complete sales forecasting pipeline with time series for multiple stores and products, integrating modern MLOps practices. The project is reproducible, scalable, and easily demonstrable via GitHub.
-
-## Data Source
-
-- Dataset: [Favorita Grocery Sales Forecasting - Kaggle](https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data)
-- Description: Daily sales by product and store, with information on holidays, promotions, and product types.
-- Size: ~125MB
-- Format: CSV (train.csv, holidays_events.csv, oil.csv, stores.csv, transactions.csv)
-
-## Technology Stack
-
-- **ML**: LightGBM, Prophet, ARIMA (baseline)
-- **Feature Engineering**: pandas, scikit-learn, tsfeatures
-- **MLOps**:
-  - MLflow (experiments + model registry)
-  - DVC (data versioning and pipeline)
-  - Docker (reproducible environment)
-  - FastAPI (inference REST service)
-  - GitHub Actions (CI/CD for tests and deployment)
-  - Feature Store (metadata management + feature versioning)
-  - Model Monitoring (drift detection + automated retraining)
-  - Apache Airflow (workflow orchestration)
-  - SHAP (model explainability)
-  - JWT Authentication (API security)
-  - Sentry (error monitoring)
-  - Great Expectations (data validation)
-
-## Advanced MLOps Features
-
-### Feature Store
-- Central repository for all feature definitions
-- Feature versioning and metadata tracking
-- Dependency management between features
-- Transformation management for training and inference
-- Feature grouping for better organization
-
-### Model Monitoring
-- Data drift detection using statistical methods
-- Performance monitoring to detect model degradation
-- Automated alerting when drift is detected
-- Visual drift reports for better understanding
-- Automated recommendation for retraining
-
-### Automated Training Pipeline
-- End-to-end training pipeline with Apache Airflow
-- Integration with Feature Store and Model Monitoring
-- Experiment tracking with MLflow
-- Model registry integration
-- Continuous evaluation and deployment
-
-### Model Explainability
-- SHAP values for feature importance
-- Local and global model explanations
-- Interactive visualizations for feature contributions
-- API endpoint for explaining individual predictions
-- Customizable explanation reports
-
-### Security
-- JWT-based authentication
-- Role-based access control
-- Scoped permissions for API endpoints
-- Secure password hashing
-- Environment-specific configuration
-
-### Observability
-- Comprehensive error tracking with Sentry
-- Detailed logging and monitoring
-- Health check endpoints
-- Prometheus metrics integration
-- Grafana dashboards
+- **Machine Learning Model**: Using LightGBM for sales prediction
+- **REST API**: Implemented with FastAPI to serve predictions
+- **Dashboard**: Interactive user interface implemented with Streamlit
+- **Experiment Tracking**: Using MLflow to manage model versions
+- **Data Versioning**: Using DVC for data version control
+- **Authentication**: JWT system for secure user authentication
+- **Monitoring**: Sentry integration for error detection
 
 ## Project Structure
 
 ```
-├── .github/workflows/    # CI/CD pipelines
-├── data/                 # Raw and processed data
-├── feature_store/        # Feature definitions and metadata
-├── models/               # Trained models
-├── monitoring/           # Model monitoring data and alerts
-├── notebooks/            # Exploratory data analysis
-├── reports/              # Generated reports and visualizations
-├── src/                  # Source code
-│   ├── data/             # Data processing scripts
-│   ├── features/         # Feature engineering and Feature Store
-│   ├── models/           # Model training and evaluation
-│   ├── monitoring/       # Monitoring and drift detection
-│   ├── api/              # FastAPI service
-│   └── utils/            # Utility functions
-├── tests/                # Unit and integration tests
-├── scheduled_training.sh # Script for automated training
-└── logs/                 # Training logs
+mlproject/
+├── data/                # Raw and processed data
+├── models/              # Trained models
+├── mlruns/              # MLflow records
+├── notebooks/           # Exploratory data analysis notebooks
+├── src/
+│   ├── api/             # FastAPI API
+│   ├── dashboard/       # Streamlit Dashboard
+│   ├── features/        # Feature engineering
+│   ├── models/          # Model definitions
+│   ├── security/        # Security and authentication
+│   └── utils/           # Utilities
+├── tests/               # Automated tests
+├── .dvc/                # DVC configuration
+├── .github/             # GitHub Actions workflows
+├── requirements.txt     # Project dependencies
+└── README.md            # This file
 ```
 
-## Setup
+## Installation
 
+1. Clone the repository:
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/store-sales-forecasting.git
-cd store-sales-forecasting
+git clone https://github.com/your-username/mlproject.git
+cd mlproject
+```
 
-# Install dependencies
+2. Install dependencies:
+```bash
 pip install -r requirements.txt
-
-# Download the data
-python src/data/load_data.py
-
-# Run the training pipeline
-python src/training_pipeline.py
 ```
 
 ## Running the API
 
-Start the prediction API service:
-
 ```bash
+# Start the API
 python src/api/main.py
 ```
 
-The API will be available at http://localhost:8000, with interactive documentation at http://localhost:8000/docs.
+The API will be available at `http://localhost:8000`. API documentation: `http://localhost:8000/docs`
 
-## Experiment Tracking with MLflow
-
-This project uses MLflow for experiment tracking and model versioning:
+## Running the Dashboard
 
 ```bash
-# Start the MLflow UI
-mlflow ui
+# Start the Streamlit dashboard
+streamlit run src/dashboard/app.py
 ```
 
-Access the MLflow dashboard at http://localhost:5000 to:
-- Compare different runs and models
-- View performance metrics
-- Manage model versions
-- Track model lineage and parameters
+The dashboard will be available at `http://localhost:8501`
 
-## Model Monitoring
+## Deployment Configuration
 
-Monitor your model for drift and performance issues:
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```
+API_URL=https://your-api-url.com
+MLFLOW_URL=https://your-mlflow-url.com
+SENTRY_DSN=your-sentry-dsn
+```
+
+### Streamlit Cloud Configuration
+
+1. Push the project to GitHub
+2. Go to [Streamlit Cloud](https://streamlit.io/cloud)
+3. Connect your GitHub account
+4. Select the repository and the file `src/dashboard/app.py`
+5. Configure the necessary environment variables (API_URL, MLFLOW_URL)
+6. Deploy the application
+
+## Demo Users
+
+- Username: johndoe / Password: secret
+- Username: admin / Password: admin
+
+## Development
+
+### Updating Dependencies
+
+If you add new dependencies, update the requirements.txt file:
 
 ```bash
-# Check for data drift in new data
-python -c "from src.monitoring.model_monitoring import ModelMonitor; mm = ModelMonitor('store-sales-forecaster'); mm.check_data_drift(new_data)"
-
-# View recent alerts
-python -c "from src.monitoring.model_monitoring import ModelMonitor; mm = ModelMonitor('store-sales-forecaster'); print(mm.get_alerts())"
+pip freeze > requirements.txt
 ```
 
-## Automated Training
-
-The project includes a script for scheduled model training:
+### Running Tests
 
 ```bash
-# Make the script executable
-chmod +x scheduled_training.sh
-
-# Run the script manually
-./scheduled_training.sh
+pytest
 ```
 
-For automated training, set up a cron job (see `scheduled_training_instructions.md` for details).
+## Contribution
+
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/new-feature`)
+3. Commit your changes (`git commit -m 'Add new feature'`)
+4. Push to the branch (`git push origin feature/new-feature`)
+5. Open a Pull Request
 
 ## License
 
-MIT 
+This project is licensed under the MIT License - see the LICENSE file for details. 
