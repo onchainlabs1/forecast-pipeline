@@ -37,6 +37,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Configurar tema escuro
+st.markdown("""
+<style>
+:root {
+    --background-color: #0e1117;
+    --secondary-background-color: #262730;
+    --primary-color: #ff4b4b;
+    --text-color: #fafafa;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # Authentication functions
 def login(username, password):
     """
@@ -672,7 +684,7 @@ def render_predictions():
                             # Add the prediction point
                             future_df = pd.DataFrame({
                                 'date': [date],
-                                'sales': [prediction['prediction']]  # Usa o mesmo valor verificado anteriormente
+                                'sales': [prediction_value]  # Usa o mesmo valor verificado anteriormente
                             })
                             
                             # Plot

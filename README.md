@@ -180,6 +180,12 @@ If you encounter the KeyError: 'predicted_sales' error in the dashboard:
 2. Delete all __pycache__ directories: `find . -name "__pycache__" -type d -exec rm -rf {} +`
 3. Restart the application using the script: `bash run_dashboard.sh`
 
+The dashboard is now configured to handle both 'prediction' and 'predicted_sales' key formats from the API, making it more robust.
+
+#### Interface Customization
+
+The dashboard now uses a dark theme by default. This is configured in the `src/dashboard/app.py` file with custom CSS. You can modify the theme colors by editing the CSS variables in the file.
+
 ### Known Issues
 
 - SHAP explanations for predictions may fail with non-tree-based models
