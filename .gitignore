@@ -39,6 +39,11 @@ data/*.csv
 data/*.parquet
 data/*.json
 
+# Large data files
+data/raw/train.csv
+data/processed/train_features.csv
+data/processed/test_features.csv
+
 # IDE configurations
 .idea/
 .vscode/
