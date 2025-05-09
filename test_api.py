@@ -9,7 +9,7 @@ def print_json(data):
     print(json.dumps(data, indent=2))
 
 def get_token(base_url):
-    """Obtém um token de autenticação."""
+    """Get an authentication token."""
     try:
         auth_data = {
             "username": "johndoe",
@@ -20,37 +20,37 @@ def get_token(base_url):
             token_data = response.json()
             return token_data.get("access_token")
         else:
-            print(f"Falha na autenticação: {response.status_code}")
+            print(f"Authentication failed: {response.status_code}")
             print(response.text)
             return None
     except Exception as e:
-        print(f"Erro ao obter token: {e}")
+        print(f"Error obtaining token: {e}")
         return None
 
 def main():
-    print("Testando a API de previsão de vendas...")
+    print("Testing the Sales Forecasting API...")
     print("-----------------------------------------")
     
     base_url = "http://localhost:8000"
     
-    # Obter token
+    # Get token
     token = get_token(base_url)
     headers = {}
     if token:
-        print(f"Token obtido: {token[:10]}...")
+        print(f"Token obtained: {token[:10]}...")
         headers = {"Authorization": f"Bearer {token}"}
     else:
-        print("Token não obtido, tentando requisições sem autenticação...")
+        print("Token not obtained, trying requests without authentication...")
     
-    # 1. Teste de health check
-    print("\n1. Teste de health check:")
+    # 1. Health check test
+    print("\n1. Health check test:")
     response = requests.get(f"{base_url}/health")
     health_data = response.json()
     print_json(health_data)
     print("-----------------------------------------")
     
-    # 2. Teste de previsão individual
-    print("\n2. Teste de previsão individual:")
+    # 2. Individual prediction test
+    print("\n2. Individual prediction test:")
     prediction_params = {
         "store_nbr": 1,
         "family": "PRODUCE",
@@ -63,12 +63,12 @@ def main():
         print_json(prediction_data)
         print(f"Status: {response.status_code}")
     except Exception as e:
-        print(f"Erro ao processar resposta: {e}")
-        print(f"Resposta: {response.text}")
+        print(f"Error processing response: {e}")
+        print(f"Response: {response.text}")
     print("-----------------------------------------")
     
-    # 3. Teste de explicação
-    print("\n3. Teste de explicação:")
+    # 3. Explanation test
+    print("\n3. Explanation test:")
     prediction_id = "1-PRODUCE-2025-05-10"
     explanation_params = {
         "store_nbr": 1,
@@ -82,19 +82,19 @@ def main():
         print_json(explanation_data)
         print(f"Status: {response.status_code}")
         
-        # Verificar se a explicação contém feature_contributions
+        # Check if explanation contains feature_contributions
         if "feature_contributions" in explanation_data:
-            print(f"\nNúmero de características explicadas: {len(explanation_data['feature_contributions'])}")
-            print("\nPrincipais contribuições:")
+            print(f"\nNumber of features explained: {len(explanation_data['feature_contributions'])}")
+            print("\nTop contributions:")
             top_features = explanation_data["feature_contributions"][:5]
             for feature in top_features:
                 print(f"  - {feature['feature']}: {feature['contribution']:.4f}")
     except Exception as e:
-        print(f"Erro ao processar resposta: {e}")
-        print(f"Resposta: {response.text}")
+        print(f"Error processing response: {e}")
+        print(f"Response: {response.text}")
     print("-----------------------------------------")
     
-    print("Testes concluídos.")
+    print("Tests completed.")
 
 if __name__ == "__main__":
     main() 
