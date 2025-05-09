@@ -25,16 +25,26 @@ MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "mlruns")
 EXPERIMENT_NAME = "store-sales-forecasting"
 
 
-def setup_mlflow():
+def setup_mlflow(disable_for_production=False):
     """
     Set up MLflow tracking.
+    
+    Parameters
+    ----------
+    disable_for_production : bool, optional (default=False)
+        If True, MLflow will be disabled in production environment.
     
     Returns
     -------
     str
-        The active experiment ID.
+        The active experiment ID or None if MLflow is disabled.
     """
     try:
+        # Check if MLflow should be disabled in production
+        if disable_for_production and os.getenv("ENVIRONMENT") == "production":
+            logger.info("MLflow disabled in production environment")
+            return None
+            
         # Set the tracking URI
         mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
         logger.info(f"MLflow tracking URI set to: {MLFLOW_TRACKING_URI}")

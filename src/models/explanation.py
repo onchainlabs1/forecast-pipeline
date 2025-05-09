@@ -411,6 +411,16 @@ def generate_explanation(model, instance, feature_names=None, background_data=No
         explainer = ModelExplainer(model=model, feature_names=feature_names)
         
         try:
+            # Check if feature names match instance size
+            if feature_names is not None and len(feature_names) != len(instance):
+                logger.warning(f"Feature names length ({len(feature_names)}) does not match instance length ({len(instance)}). Truncating feature names.")
+                if len(feature_names) > len(instance):
+                    feature_names = feature_names[:len(instance)]
+                else:
+                    # If we have fewer names than features, pad with generic names
+                    additional_names = [f"feature_{i+len(feature_names)}" for i in range(len(instance) - len(feature_names))]
+                    feature_names = feature_names + additional_names
+            
             # Create the SHAP explainer
             explainer.create_explainer(data=background_data)
             
@@ -419,18 +429,45 @@ def generate_explanation(model, instance, feature_names=None, background_data=No
             return explanation
         
         except ValueError as ve:
+            logger.warning(f"SHAP explainer error: {ve}")
             if "Background data needed" in str(ve):
                 logger.warning("Background data needed for non-tree-based model")
                 # Return a fallback explanation
                 return explainer._generate_fallback_explanation(instance, feature_names)
             else:
-                raise ve
+                # Generate fallback for any other ValueError too
+                logger.warning("Using fallback explanation due to SHAP error")
+                return explainer._generate_fallback_explanation(instance, feature_names)
                 
     except Exception as e:
         logger.error(f"Error creating SHAP explainer: {e}")
         # If we can't create the explainer, return a basic fallback
-        return {
-            "message": f"Cannot generate explanation: {str(e)}",
-            "fallback_explanation": True,
-            "feature_contributions": []
-        } 
+        # Create a more helpful response
+        if isinstance(instance, (list, np.ndarray)) and len(instance) > 0:
+            # Create simple feature contributions based on input values
+            contributions = []
+            instance_array = np.asarray(instance).flatten()
+            for i, value in enumerate(instance_array):
+                feature_name = feature_names[i] if feature_names and i < len(feature_names) else f"feature_{i}"
+                contributions.append({
+                    "feature": feature_name,
+                    "value": float(value),
+                    "contribution": float(abs(value)) # Simple heuristic - larger values contribute more
+                })
+            
+            # Sort by contribution (absolute value) and take top 10
+            contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
+            top_contributions = contributions[:10]
+            
+            return {
+                "message": "Simple feature explanation (SHAP unavailable)",
+                "fallback_explanation": True,
+                "feature_contributions": top_contributions,
+                "error": str(e)
+            }
+        else:
+            return {
+                "message": f"Cannot generate explanation: {str(e)}",
+                "fallback_explanation": True,
+                "feature_contributions": []
+            } 

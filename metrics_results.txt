@@ -1,0 +1,31 @@
+Getting token...
+Token obtained successfully
+
+1. Testing metrics_summary endpoint...
+Success! Status code: 200
+Total stores: 54
+Total families: 34
+Avg sales: $55.92
+Forecast accuracy: 80.17%
+Is mock data: False
+
+2. Testing metrics_accuracy_check endpoint...
+Success! Status code: 200
+Data points: 720
+MAPE: 19.83%
+Forecast accuracy: 80.17%
+MAE: 46.16
+RMSE: 50.64
+Mean error: -3.76
+Calculation method: 100 - MAPE (Mean Absolute Percentage Error)
+
+Sample data points:
+  1. Store: 1, Family: HOME APPLIANCES
+     Predicted: 113.32, Actual: 153.40
+     Error: -40.08, Percentage error: 26.13%
+  2. Store: 1, Family: LIQUOR,WINE,BEER
+     Predicted: 147.67, Actual: 161.76
+     Error: -14.08, Percentage error: 8.71%
+  3. Store: 2, Family: HOME APPLIANCES
+     Predicted: 270.97, Actual: 189.64
+     Error: 81.32, Percentage error: 42.88%

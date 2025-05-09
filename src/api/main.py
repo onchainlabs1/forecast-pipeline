@@ -17,6 +17,7 @@ import numpy as np
 import joblib
 from fastapi import FastAPI, HTTPException, Query, Depends, Security, status
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import mlflow
 import uvicorn
@@ -74,6 +75,15 @@ app = FastAPI(
     title="Store Sales Forecasting API",
     description="API for predicting store sales for Favorita stores",
     version="1.0.0",
+)
+
+# Configure CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite todas as origens
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos os métodos
+    allow_headers=["*"],  # Permite todos os cabeçalhos
 )
 
 # Pydantic models for request and response
@@ -247,8 +257,11 @@ async def startup_event():
     
     logger.info("API starting up")
     try:
-        # Initialize MLflow
-        setup_mlflow()
+        # Check if MLflow should be disabled
+        disable_mlflow = os.getenv("DISABLE_MLFLOW", "false").lower() == "true"
+        
+        # Initialize MLflow with production flag
+        setup_mlflow(disable_for_production=True)
         
         # Load model
         model = load_model()
@@ -637,13 +650,33 @@ async def explain_prediction(
         # Get feature names
         feature_names = get_feature_names()
         
+        # Ensure feature names matches feature length
+        if len(feature_names) != len(features):
+            logger.warning(f"Feature names count ({len(feature_names)}) does not match features count ({len(features)}). Adjusting...")
+            if len(feature_names) > len(features):
+                feature_names = feature_names[:len(features)]
+            else:
+                # Pad with generic names if needed
+                additional_names = [f"feature_{i+len(feature_names)}" for i in range(len(features) - len(feature_names))]
+                feature_names = feature_names + additional_names
+        
         try:
             # Generate SHAP values
             from src.models.explanation import generate_explanation
             
             explanation = generate_explanation(model, features, feature_names)
             
+            # Ensure we have valid JSON
             if explanation:
+                # Convert numpy values to Python native types
+                if "feature_contributions" in explanation:
+                    for fc in explanation["feature_contributions"]:
+                        if "value" in fc and hasattr(fc["value"], "item"):
+                            fc["value"] = fc["value"].item()
+                        if "contribution" in fc and hasattr(fc["contribution"], "item"):
+                            fc["contribution"] = fc["contribution"].item()
+                
+                # Return the explanation
                 return explanation
             else:
                 # Fallback explanation when SHAP is not available
@@ -724,7 +757,14 @@ async def explain_prediction(
             }
     except Exception as e:
         logger.error(f"Error generating explanation: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error generating explanation: {str(e)}")
+        # Return a simplified error response instead of an HTTP error
+        return {
+            "message": f"Error generating explanation: {str(e)}",
+            "feature_contributions": [
+                {"feature": "Error occurred", "value": "Could not generate explanation", "contribution": 0.0}
+            ],
+            "error": str(e)
+        }
 
 
 @app.get("/users/me", response_model=User)

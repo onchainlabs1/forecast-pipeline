@@ -32,7 +32,22 @@ DB_DIR = PROJECT_DIR / "data" / "db"
 os.makedirs(DB_DIR, exist_ok=True)
 
 # Database URL
-DB_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_DIR}/sales_forecasting.db")
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_DIR}/sales_forecasting.db")
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD", "")
+
+# Construct full URL with password if provided
+if DATABASE_PASSWORD and "postgresql" in DATABASE_URL and ":" in DATABASE_URL:
+    # If URL has format postgresql://user:@host:port/db
+    # Replace the empty password with the actual password
+    parts = DATABASE_URL.split(":")
+    if "@" in parts[2]:
+        DB_URL = f"{parts[0]}:{parts[1]}:{DATABASE_PASSWORD}@{parts[2].split('@')[1]}:{parts[3]}"
+    else:
+        DB_URL = DATABASE_URL
+else:
+    DB_URL = DATABASE_URL
+
+logger.info(f"Using database: {DB_URL.split('@')[0].split(':')[0]}://*****@{DB_URL.split('@')[1] if '@' in DB_URL else '(local)'}")
 
 # SQLAlchemy engine
 if DB_URL.startswith("sqlite"):
