@@ -5,11 +5,10 @@ Module for model explainability using SHAP.
 import logging
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import shap
 from typing import Dict, List, Any, Optional, Union
 from pathlib import Path
 import joblib
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -17,6 +16,15 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Importações condicionais
+PLOTTING_AVAILABLE = False
+try:
+    import matplotlib.pyplot as plt
+    import shap
+    PLOTTING_AVAILABLE = True
+except ImportError:
+    logger.warning("matplotlib or shap not available, visualization features will be disabled")
 
 # Define paths
 PROJECT_DIR = Path(__file__).resolve().parents[2]
@@ -50,8 +58,9 @@ class ModelExplainer:
         self.feature_names = feature_names
         self.explainer = None
         
-        # Create directory for plots
-        SHAP_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+        # Create directory for plots if visualization is available
+        if PLOTTING_AVAILABLE:
+            os.makedirs(SHAP_PLOTS_DIR, exist_ok=True)
         
         # Load model if a path is provided
         if model_path is not None:
@@ -88,6 +97,10 @@ class ModelExplainer:
         explainer : shap.Explainer
             SHAP explainer for the model.
         """
+        if not PLOTTING_AVAILABLE:
+            logger.warning("SHAP not available, cannot create explainer")
+            return None
+            
         try:
             logger.info("Creating SHAP explainer")
             
@@ -126,6 +139,10 @@ class ModelExplainer:
         shap_values : numpy.ndarray
             SHAP values for the provided data.
         """
+        if not PLOTTING_AVAILABLE:
+            logger.warning("SHAP not available, cannot compute SHAP values")
+            return None
+            
         if self.explainer is None:
             self.create_explainer()
         
@@ -153,6 +170,10 @@ class ModelExplainer:
         fig : matplotlib.figure.Figure
             Figure of the generated plot.
         """
+        if not PLOTTING_AVAILABLE:
+            logger.warning("matplotlib or SHAP not available, cannot create plot")
+            return None
+            
         logger.info("Generating SHAP summary plot")
         
         plt.figure(figsize=(10, 8))
@@ -185,6 +206,10 @@ class ModelExplainer:
         fig : matplotlib.figure.Figure
             Figure of the generated plot.
         """
+        if not PLOTTING_AVAILABLE:
+            logger.warning("matplotlib or SHAP not available, cannot create plot")
+            return None
+            
         logger.info("Generating feature importance plot")
         
         plt.figure(figsize=(10, 8))
@@ -201,273 +226,260 @@ class ModelExplainer:
     
     def explain_prediction(self, instance, feature_names=None):
         """
-        Explains a specific prediction.
+        Generates a detailed explanation for a single prediction.
         
         Parameters
         ----------
-        instance : pandas.Series or numpy.ndarray
-            Instance for which to explain the prediction.
+        instance : numpy.ndarray or pandas.DataFrame
+            Instance for which to generate explanation.
         feature_names : list, optional
-            Feature names. If None, the default names will be used.
+            Names of the features. If None, use self.feature_names.
         
         Returns
         -------
         explanation : dict
-            Dictionary with the prediction explanations.
+            Dictionary with prediction explanation details.
         """
-        try:
-            if self.explainer is None:
-                logger.warning("SHAP explainer not initialized")
-                return self._generate_fallback_explanation(instance, feature_names)
-            
-            # Convert instance to numpy array if it's a pandas Series
-            if isinstance(instance, pd.Series):
-                if feature_names is None:
-                    feature_names = instance.index.tolist()
-                instance = instance.values.reshape(1, -1)
-            elif isinstance(instance, np.ndarray):
-                instance = instance.reshape(1, -1)
-            
-            # Get SHAP values
-            shap_values = self.explainer.shap_values(instance)
-            
-            # Get the base value (expected value)
-            expected_value = self.explainer.expected_value
-            if isinstance(expected_value, list):
-                expected_value = expected_value[0]
-            
-            # Create a dataframe with feature contributions
-            feature_contributions = []
-            
-            # Use provided feature names or default ones
-            if feature_names is None:
-                if hasattr(self.model, 'feature_names_'):
-                    feature_names = self.model.feature_names_
-                else:
-                    feature_names = [f"feature_{i}" for i in range(instance.shape[1])]
-            
-            # Create feature contribution objects
-            for i in range(len(feature_names)):
-                contribution = float(shap_values[0][i])
-                feature_contributions.append({
-                    "feature": feature_names[i],
-                    "value": float(instance[0][i]),
-                    "contribution": contribution
-                })
-            
-            # Sort by absolute contribution
-            feature_contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
-            
-            return {
-                "expected_value": float(expected_value),
-                "feature_contributions": feature_contributions
-            }
-        except Exception as e:
-            logger.error(f"Error creating SHAP explainer: {e}")
+        if not PLOTTING_AVAILABLE:
+            logger.warning("SHAP not available, returning fallback explanation")
             return self._generate_fallback_explanation(instance, feature_names)
             
+        # Set feature names if provided
+        if feature_names:
+            self.feature_names = feature_names
+        
+        # Ensure instance is a DataFrame or convert it
+        if isinstance(instance, np.ndarray):
+            if instance.ndim == 1:
+                # Convert 1D array to 2D
+                instance = np.array([instance])
+            
+            # Convert to DataFrame if feature names are available
+            if self.feature_names:
+                # Make sure feature counts match
+                if instance.shape[1] != len(self.feature_names):
+                    logger.error(f"Length of values ({instance.shape[1]}) does not match length of index ({len(self.feature_names)})")
+                    return self._generate_fallback_explanation(instance, feature_names)
+                    
+                instance = pd.DataFrame(instance, columns=self.feature_names)
+        
+        try:
+            # Create explainer if not exists
+            if self.explainer is None:
+                self.create_explainer()
+            
+            # Compute SHAP values
+            shap_values = self.compute_shap_values(instance)
+            
+            # Prepare feature contribution list
+            contrib_dict = {}
+            
+            if isinstance(shap_values, np.ndarray):
+                # For older SHAP versions
+                for i, feature in enumerate(self.feature_names):
+                    contrib_dict[feature] = float(shap_values[0][i])
+            else:
+                # For newer SHAP versions
+                for i, feature in enumerate(shap_values.feature_names):
+                    contrib_dict[feature] = float(shap_values.values[0][i])
+            
+            # Sort by absolute value, descending
+            contributions = [
+                {"feature": feature, "contribution": contrib}
+                for feature, contrib in sorted(
+                    contrib_dict.items(), 
+                    key=lambda x: abs(x[1]), 
+                    reverse=True
+                )
+            ]
+            
+            # Get prediction
+            prediction = float(self.model.predict(instance)[0])
+            
+            # Create explanation
+            explanation = {
+                "prediction": prediction,
+                "feature_contributions": contributions,
+                "explanation_type": "shap",
+            }
+            
+            return explanation
+            
+        except Exception as e:
+            logger.error(f"Error creating SHAP explanation: {e}")
+            return self._generate_fallback_explanation(instance, feature_names)
+
+
     def _generate_fallback_explanation(self, instance, feature_names=None):
         """
-        Generates a fallback explanation when SHAP cannot be used.
+        Generates a fallback explanation when SHAP explainer fails.
         
-        Returns a simpler explanation based on feature values.
+        Parameters
+        ----------
+        instance : numpy.ndarray or pandas.DataFrame
+            Instance for which to generate explanation.
+        feature_names : list, optional
+            Names of the features.
+        
+        Returns
+        -------
+        explanation : dict
+            Dictionary with basic prediction explanation.
         """
-        # Generate feature names if not provided
-        if feature_names is None:
-            if hasattr(self.model, 'feature_names_'):
-                feature_names = self.model.feature_names_
+        try:
+            # Set feature names if provided
+            if feature_names:
+                self.feature_names = feature_names
+            
+            # Ensure we have feature names
+            if not self.feature_names and hasattr(instance, 'columns'):
+                self.feature_names = instance.columns.tolist()
+            
+            # Get prediction
+            prediction = float(self.model.predict(instance)[0])
+            
+            # Create basic contributions
+            if hasattr(self.model, 'feature_importances_') and self.feature_names:
+                # Some models have feature_importances_
+                importances = self.model.feature_importances_
+                
+                # Map feature names to importances
+                contributions = [
+                    {"feature": feature, "contribution": float(imp)}
+                    for feature, imp in zip(self.feature_names, importances)
+                ]
+                
+                # Sort by importance
+                contributions = sorted(
+                    contributions, 
+                    key=lambda x: abs(x["contribution"]), 
+                    reverse=True
+                )
             else:
-                if isinstance(instance, pd.Series):
-                    feature_names = instance.index.tolist()
-                else:
-                    feature_names = [f"feature_{i}" for i in range(len(instance))]
-        
-        # Convert instance to a Series if it's not already
-        if not isinstance(instance, pd.Series):
-            instance = pd.Series(instance, index=feature_names)
-        
-        # Create a mock explanation based on feature magnitudes
-        # This is just a heuristic approach when SHAP is not available
-        values = instance.values
-        contributions = np.abs(values) / np.sum(np.abs(values)) * np.sign(values)
-        
-        # Create feature contribution objects
-        feature_contributions = []
-        for i in range(len(feature_names)):
-            value = float(values[i])
-            # Generate a reasonable "contribution" based on feature value
-            contribution = float(contributions[i])
-            feature_contributions.append({
-                "feature": feature_names[i],
-                "value": value,
-                "contribution": contribution
-            })
-        
-        # Sort by absolute contribution
-        feature_contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
-        
-        return {
-            "expected_value": float(np.mean(values)),
-            "feature_contributions": feature_contributions,
-            "fallback_explanation": True,
-            "explanation_type": "feature_magnitude_based"
-        }
-    
+                # Generate dummy contributions
+                contributions = [
+                    {"feature": f"Feature {i}", "contribution": 0.0}
+                    for i in range(min(10, len(self.feature_names or [])))
+                ]
+            
+            # Create explanation
+            explanation = {
+                "prediction": prediction,
+                "feature_contributions": contributions,
+                "explanation_type": "fallback",
+            }
+            
+            return explanation
+            
+        except Exception as e:
+            logger.error(f"Error creating fallback explanation: {e}")
+            # Return minimal explanation
+            return {
+                "prediction": 0.0,
+                "feature_contributions": [],
+                "explanation_type": "error",
+                "error": str(e)
+            }
+
+
     def generate_explanation_report(self, X, output_dir=None):
         """
-        Generates a complete model explanation report.
+        Generates a comprehensive explanation report for a dataset.
         
         Parameters
         ----------
         X : pandas.DataFrame
-            Data to generate explanations.
+            Dataset for which to generate explanation report.
         output_dir : str or Path, optional
-            Directory to save the plots. If None, SHAP_PLOTS_DIR will be used.
+            Directory to save the report files. If None, use SHAP_PLOTS_DIR.
         
         Returns
         -------
-        report : dict
-            Dictionary with the explanation report.
+        report_files : dict
+            Dictionary with paths to generated report files.
         """
-        if output_dir is None:
-            output_dir = SHAP_PLOTS_DIR
-        else:
-            output_dir = Path(output_dir)
-            output_dir.mkdir(parents=True, exist_ok=True)
-        
-        logger.info(f"Generating model explanation report in {output_dir}")
-        
-        # Calculate SHAP values
-        shap_values = self.compute_shap_values(X)
-        
-        # Generate plots
-        summary_plot_path = output_dir / "shap_summary.png"
-        importance_plot_path = output_dir / "shap_importance.png"
-        
-        self.plot_summary(shap_values, X, summary_plot_path)
-        self.plot_feature_importance(shap_values, X, importance_plot_path)
-        
-        # Calculate average importance
-        if isinstance(shap_values, shap._explanation.Explanation):
-            shap_values_array = shap_values.values
-            mean_abs_shap = np.mean(np.abs(shap_values_array), axis=0)
-        else:
-            mean_abs_shap = np.mean(np.abs(shap_values), axis=0)
-        
-        # Sort features by importance
-        if X.columns is not None:
-            feature_importance = sorted(
-                zip(X.columns, mean_abs_shap),
-                key=lambda x: x[1],
-                reverse=True
-            )
-            feature_importance = [{"feature": feature, "importance": float(imp)} for feature, imp in feature_importance]
-        else:
-            feature_importance = [{"feature": f"feature_{i}", "importance": float(imp)} for i, imp in enumerate(mean_abs_shap)]
-        
-        # Create report
-        report = {
-            "model_type": type(self.model).__name__,
-            "feature_importance": feature_importance,
-            "plots": {
-                "summary_plot": str(summary_plot_path),
-                "importance_plot": str(importance_plot_path)
-            }
-        }
-        
-        # Save report
-        report_path = output_dir / "explanation_report.json"
-        pd.Series(report).to_json(report_path, orient="index")
-        
-        logger.info(f"Model explanation report saved to {report_path}")
-        return report
+        if not PLOTTING_AVAILABLE:
+            logger.warning("matplotlib or SHAP not available, cannot generate report")
+            return {"error": "Visualization libraries not available"}
+            
+        try:
+            # Set output directory
+            if output_dir is None:
+                output_dir = SHAP_PLOTS_DIR
+            else:
+                output_dir = Path(output_dir)
+                
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Create explainer
+            if self.explainer is None:
+                self.create_explainer()
+            
+            # Compute SHAP values
+            shap_values = self.compute_shap_values(X)
+            
+            # Generate and save plots
+            report_files = {}
+            
+            # Summary plot
+            summary_path = output_dir / "shap_summary.png"
+            self.plot_summary(shap_values, X, output_file=summary_path)
+            report_files["summary_plot"] = str(summary_path)
+            
+            # Feature importance plot
+            importance_path = output_dir / "feature_importance.png"
+            self.plot_feature_importance(shap_values, X, output_file=importance_path)
+            report_files["importance_plot"] = str(importance_path)
+            
+            # TODO: Add more plots or report components as needed
+            
+            return report_files
+            
+        except Exception as e:
+            logger.error(f"Error generating explanation report: {e}")
+            return {"error": str(e)}
+
 
 def generate_explanation(model, instance, feature_names=None, background_data=None):
     """
-    Generate explanation for a model prediction.
-    
-    This function creates a ModelExplainer and attempts to explain a prediction.
-    If SHAP explanation fails, it returns a fallback explanation.
+    Convenience function to generate a model explanation.
     
     Parameters
     ----------
     model : object
-        The trained model to explain
-    instance : array-like
-        The input instance to explain
+        Trained model to explain.
+    instance : numpy.ndarray or pandas.DataFrame
+        Instance for which to generate explanation.
     feature_names : list, optional
-        Names of the features
-    background_data : array-like, optional
-        Background data for SHAP explainer (needed for non-tree models)
-        
+        Names of the features.
+    background_data : pandas.DataFrame, optional
+        Background data for the explainer.
+    
     Returns
     -------
-    dict
-        A dictionary containing the explanation
+    explanation : dict
+        Dictionary with prediction explanation details.
     """
+    if not PLOTTING_AVAILABLE:
+        logger.warning("SHAP not available, explanation will be limited")
+        explainer = ModelExplainer(model, feature_names=feature_names)
+        return explainer._generate_fallback_explanation(instance, feature_names)
+        
     try:
-        # Create the explainer
-        logger.info("Creating SHAP explainer")
-        explainer = ModelExplainer(model=model, feature_names=feature_names)
+        # Create explainer
+        explainer = ModelExplainer(model, feature_names=feature_names)
         
-        try:
-            # Check if feature names match instance size
-            if feature_names is not None and len(feature_names) != len(instance):
-                logger.warning(f"Feature names length ({len(feature_names)}) does not match instance length ({len(instance)}). Truncating feature names.")
-                if len(feature_names) > len(instance):
-                    feature_names = feature_names[:len(instance)]
-                else:
-                    # If we have fewer names than features, pad with generic names
-                    additional_names = [f"feature_{i+len(feature_names)}" for i in range(len(instance) - len(feature_names))]
-                    feature_names = feature_names + additional_names
-            
-            # Create the SHAP explainer
-            explainer.create_explainer(data=background_data)
-            
-            # Generate the explanation
-            explanation = explainer.explain_prediction(instance, feature_names)
-            return explanation
+        # Create SHAP explainer with background data if provided
+        if background_data is not None:
+            explainer.create_explainer(background_data)
         
-        except ValueError as ve:
-            logger.warning(f"SHAP explainer error: {ve}")
-            if "Background data needed" in str(ve):
-                logger.warning("Background data needed for non-tree-based model")
-                # Return a fallback explanation
-                return explainer._generate_fallback_explanation(instance, feature_names)
-            else:
-                # Generate fallback for any other ValueError too
-                logger.warning("Using fallback explanation due to SHAP error")
-                return explainer._generate_fallback_explanation(instance, feature_names)
-                
+        # Generate explanation
+        explanation = explainer.explain_prediction(instance, feature_names)
+        
+        return explanation
+        
     except Exception as e:
-        logger.error(f"Error creating SHAP explainer: {e}")
-        # If we can't create the explainer, return a basic fallback
-        # Create a more helpful response
-        if isinstance(instance, (list, np.ndarray)) and len(instance) > 0:
-            # Create simple feature contributions based on input values
-            contributions = []
-            instance_array = np.asarray(instance).flatten()
-            for i, value in enumerate(instance_array):
-                feature_name = feature_names[i] if feature_names and i < len(feature_names) else f"feature_{i}"
-                contributions.append({
-                    "feature": feature_name,
-                    "value": float(value),
-                    "contribution": float(abs(value)) # Simple heuristic - larger values contribute more
-                })
-            
-            # Sort by contribution (absolute value) and take top 10
-            contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
-            top_contributions = contributions[:10]
-            
-            return {
-                "message": "Simple feature explanation (SHAP unavailable)",
-                "fallback_explanation": True,
-                "feature_contributions": top_contributions,
-                "error": str(e)
-            }
-        else:
-            return {
-                "message": f"Cannot generate explanation: {str(e)}",
-                "fallback_explanation": True,
-                "feature_contributions": []
-            } 
+        logger.error(f"Error generating explanation: {e}")
+        # Create fallback explanation
+        explainer = ModelExplainer(model, feature_names=feature_names)
+        return explainer._generate_fallback_explanation(instance, feature_names) 
