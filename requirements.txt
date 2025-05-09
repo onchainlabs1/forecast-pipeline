@@ -2,19 +2,22 @@
 streamlit==1.28.0
 pandas==1.3.5
 numpy==1.22.4
-plotly==5.18.0
+plotly==5.15.0
 requests==2.31.0
 pyjwt==2.8.0
-altair==5.2.0
-pillow==10.0.0
+altair==4.2.2
+pillow==9.5.0
 python-dotenv==0.21.1
 
 # Apenas dependências essenciais para visualização
 matplotlib==3.5.3
 seaborn==0.12.2
 
-# Versões fixas e compatíveis
-rich==13.3.5
-pygments==2.16.1
-markdown-it-py==2.2.0
-mdurl==0.1.2 
+# Versões exatas que o Streamlit Cloud está instalando
+rich==14.0.0
+pygments==2.19.1
+markdown-it-py==3.0.0
+mdurl==0.1.2
+
+# Versão específica de pydantic
+pydantic>=1.10.0,<2.0.0 
