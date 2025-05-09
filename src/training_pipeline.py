@@ -20,8 +20,22 @@ import numpy as np
 import lightgbm as lgb
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-import mlflow
 import joblib
+
+# Check if MLflow should be disabled
+DISABLE_MLFLOW = os.getenv("DISABLE_MLFLOW", "false").lower() == "true"
+
+# Conditional import of MLflow
+if not DISABLE_MLFLOW:
+    try:
+        import mlflow
+        MLFLOW_AVAILABLE = True
+    except ImportError:
+        logging.warning("MLflow not installed, MLflow functionality will be disabled")
+        MLFLOW_AVAILABLE = False
+else:
+    logging.info("MLflow disabled by environment variable")
+    MLFLOW_AVAILABLE = False
 
 # Add project directory to path
 PROJECT_DIR = Path(__file__).resolve().parents[0]
@@ -68,13 +82,18 @@ class AdvancedTrainingPipeline:
         self.feature_store = FeatureStore()
         self.model_monitor = ModelMonitor(model_name)
         self.experiment_id = None
+        self.mlflow_available = MLFLOW_AVAILABLE and not DISABLE_MLFLOW
         
         # Create necessary directories
         os.makedirs(MODELS_DIR, exist_ok=True)
         os.makedirs(REPORTS_DIR, exist_ok=True)
         
-        # Initialize MLflow
-        self.experiment_id = setup_mlflow()
+        # Initialize MLflow if available
+        if self.mlflow_available:
+            self.experiment_id = setup_mlflow()
+            logger.info(f"MLflow experiment ID: {self.experiment_id}")
+        else:
+            logger.info("MLflow is disabled or not available")
     
     def register_features(self):
         """Register features for store sales forecasting."""
@@ -281,7 +300,7 @@ class AdvancedTrainingPipeline:
                    X_val: Optional[pd.DataFrame] = None, 
                    y_val: Optional[pd.Series] = None) -> Tuple[Any, Dict[str, float]]:
         """
-        Train a LightGBM model for sales forecasting.
+        Train a machine learning model.
         
         Parameters
         ----------
@@ -293,15 +312,20 @@ class AdvancedTrainingPipeline:
             Validation features
         y_val : pd.Series, optional
             Validation target
-            
+        
         Returns
         -------
-        Tuple[Any, Dict[str, float]]
-            Trained model and performance metrics
+        model : Any
+            Trained model
+        metrics : Dict[str, float]
+            Model performance metrics
         """
-        logger.info("Training LightGBM model")
+        logger.info(f"Training model with {X_train.shape[0]} samples and {X_train.shape[1]} features")
         
-        # Model parameters
+        # Check for validation set
+        use_validation = X_val is not None and y_val is not None
+        
+        # Model hyperparameters
         params = {
             'objective': 'regression',
             'metric': 'rmse',
@@ -314,99 +338,102 @@ class AdvancedTrainingPipeline:
             'verbose': -1,
         }
         
-        # Start MLflow run
-        with mlflow.start_run(experiment_id=self.experiment_id, run_name=f"{self.model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}") as run:
-            run_id = run.info.run_id
-            
-            # Log model parameters
-            log_model_params(params)
-            mlflow.log_param("n_train_samples", len(X_train))
-            
-            # Create and train LightGBM dataset
-            train_data = lgb.Dataset(X_train, label=y_train)
-            
-            if X_val is not None and y_val is not None:
-                valid_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
-                valid_sets = [train_data, valid_data]
-                valid_names = ['train', 'valid']
-                mlflow.log_param("n_val_samples", len(X_val))
-            else:
-                valid_sets = [train_data]
-                valid_names = ['train']
-            
-            # Train with early stopping
-            callbacks = [lgb.early_stopping(50, verbose=True)]
-            model = lgb.train(
-                params,
-                train_data,
-                valid_sets=valid_sets,
-                valid_names=valid_names,
-                callbacks=callbacks,
-            )
-            
-            # Calculate metrics
-            y_train_pred = model.predict(X_train)
-            train_rmse = np.sqrt(mean_squared_error(y_train, y_train_pred))
-            train_mae = mean_absolute_error(y_train, y_train_pred)
-            
-            metrics = {
-                "train_rmse": train_rmse,
-                "train_mae": train_mae
-            }
-            
-            if X_val is not None and y_val is not None:
-                y_val_pred = model.predict(X_val)
-                val_rmse = np.sqrt(mean_squared_error(y_val, y_val_pred))
-                val_mae = mean_absolute_error(y_val, y_val_pred)
-                metrics["val_rmse"] = val_rmse
-                metrics["val_mae"] = val_mae
-            
-            # Log metrics
-            log_model_metrics(metrics)
-            
-            # Plot and log feature importance
-            feature_importance = pd.DataFrame({
-                'feature': X_train.columns,
-                'importance': model.feature_importance()
-            }).sort_values('importance', ascending=False)
-            
-            # Log top 20 feature importances
-            for feature, importance in feature_importance.head(20).iterrows():
-                mlflow.log_metric(f"importance_{importance['feature']}", importance['importance'])
-            
-            # Log feature importance plot
-            import matplotlib.pyplot as plt
-            plt.figure(figsize=(10, 8))
-            plt.barh(feature_importance.head(20)['feature'], feature_importance.head(20)['importance'])
-            plt.title('Feature Importance')
-            plt.tight_layout()
-            
-            # Save plot
-            feature_imp_path = REPORTS_DIR / "feature_importance.png"
-            plt.savefig(feature_imp_path)
-            plt.close()
-            
-            # Log plot to MLflow
-            mlflow.log_artifact(str(feature_imp_path), "plots")
-            
-            # Log model
-            model_path = MODELS_DIR / f"{self.model_name}.pkl"
-            joblib.dump(model, model_path)
-            
-            # Register model in MLflow
-            log_model(
-                model=model,
-                artifact_path=str(model_path),
-                model_name=self.model_name,
-                registered_model_name=self.model_name
-            )
-            
-            logger.info(f"Model trained and registered: {self.model_name}")
-            logger.info(f"Train RMSE: {train_rmse:.4f}, Train MAE: {train_mae:.4f}")
-            if X_val is not None:
-                logger.info(f"Validation RMSE: {val_rmse:.4f}, Validation MAE: {val_mae:.4f}")
-            
-            return model, metrics
+        # Log model parameters to MLflow
+        if self.mlflow_available:
+            try:
+                with mlflow.start_run(experiment_id=self.experiment_id) as run:
+                    run_id = run.info.run_id
+                    logger.info(f"MLflow run ID: {run_id}")
+                    
+                    # Log parameters
+                    log_model_params(params)
+                    mlflow.log_param("n_samples", X_train.shape[0])
+                    mlflow.log_param("n_features", X_train.shape[1])
+            except Exception as e:
+                logger.error(f"Error starting MLflow run: {e}")
+        
+        # Create dataset for LightGBM
+        train_data = lgb.Dataset(X_train, label=y_train)
+        
+        if use_validation:
+            val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
+            valid_sets = [train_data, val_data]
+            valid_names = ['train', 'valid']
+        else:
+            valid_sets = [train_data]
+            valid_names = ['train']
+        
+        # Train the model
+        callbacks = [lgb.early_stopping(50, verbose=False)]
+        model = lgb.train(
+            params,
+            train_data,
+            num_boost_round=1000,
+            valid_sets=valid_sets,
+            valid_names=valid_names,
+            callbacks=callbacks,
+        )
+        
+        # Get metrics
+        metrics = {}
+        
+        # Predictions on training data
+        train_preds = model.predict(X_train)
+        metrics['train_rmse'] = float(np.sqrt(mean_squared_error(y_train, train_preds)))
+        metrics['train_mae'] = float(mean_absolute_error(y_train, train_preds))
+        
+        if use_validation:
+            # Predictions on validation data
+            val_preds = model.predict(X_val)
+            metrics['val_rmse'] = float(np.sqrt(mean_squared_error(y_val, val_preds)))
+            metrics['val_mae'] = float(mean_absolute_error(y_val, val_preds))
+        
+        # Log metrics to MLflow
+        if self.mlflow_available:
+            try:
+                log_model_metrics(metrics)
+                
+                # Log feature importance
+                importance = model.feature_importance(importance_type='gain')
+                feature_importance = pd.DataFrame({
+                    'Feature': X_train.columns,
+                    'Importance': importance
+                }).sort_values(by='Importance', ascending=False)
+                
+                # Create feature importance plot
+                plt_path = Path(REPORTS_DIR) / f"feature_importance_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                feature_importance.plot(x='Feature', y='Importance', kind='bar', figsize=(12, 6))
+                plt.tight_layout()
+                plt.savefig(plt_path)
+                plt.close()
+                
+                # Log feature importance plot
+                mlflow.log_artifact(str(plt_path))
+                
+                # Log feature importance as a JSON file
+                importance_path = Path(REPORTS_DIR) / f"feature_importance_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                feature_importance.to_json(importance_path, orient='records')
+                mlflow.log_artifact(str(importance_path))
+                
+                # Log model to MLflow
+                model_path = str(MODELS_DIR / f"{self.model_name}.pkl")
+                joblib.dump(model, model_path)
+                log_model(model, model_path, registered_model_name=self.model_name)
+                
+            except Exception as e:
+                logger.error(f"Error logging to MLflow: {e}")
+        
+        # Save metrics to JSON
+        metrics_path = REPORTS_DIR / "metrics.json"
+        try:
+            with open(metrics_path, 'w') as f:
+                json.dump(metrics, f, indent=4)
+            logger.info(f"Metrics saved to {metrics_path}")
+        except Exception as e:
+            logger.error(f"Error saving metrics: {e}")
+        
+        logger.info(f"Model training completed with metrics: {metrics}")
+        return model, metrics
     
     def evaluate_model(self, model: Any, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]:
         """

@@ -9,9 +9,6 @@ import os
 import logging
 from pathlib import Path
 
-import mlflow
-from mlflow.tracking import MlflowClient
-
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -23,6 +20,22 @@ logger = logging.getLogger(__name__)
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "mlruns")
 EXPERIMENT_NAME = "store-sales-forecasting"
+
+# Verify if MLflow should be disabled
+DISABLE_MLFLOW = os.getenv("DISABLE_MLFLOW", "false").lower() == "true"
+
+# Conditional import of MLflow
+if not DISABLE_MLFLOW:
+    try:
+        import mlflow
+        from mlflow.tracking import MlflowClient
+        MLFLOW_AVAILABLE = True
+    except ImportError:
+        logger.warning("MLflow not installed, MLflow functionality will be disabled")
+        MLFLOW_AVAILABLE = False
+else:
+    logger.info("MLflow disabled by environment variable")
+    MLFLOW_AVAILABLE = False
 
 
 def setup_mlflow(disable_for_production=False):
@@ -39,6 +52,11 @@ def setup_mlflow(disable_for_production=False):
     str
         The active experiment ID or None if MLflow is disabled.
     """
+    # Return early if MLflow is disabled or not available
+    if not MLFLOW_AVAILABLE:
+        logger.info("MLflow is disabled or not available")
+        return None
+        
     try:
         # Check if MLflow should be disabled in production
         if disable_for_production and os.getenv("ENVIRONMENT") == "production":
@@ -77,6 +95,10 @@ def log_model_params(params):
     params : dict
         Dictionary of model parameters.
     """
+    if not MLFLOW_AVAILABLE:
+        logger.info("MLflow is disabled or not available, skipping parameter logging")
+        return
+        
     try:
         for key, value in params.items():
             mlflow.log_param(key, value)
@@ -95,6 +117,10 @@ def log_model_metrics(metrics):
     metrics : dict
         Dictionary of model metrics.
     """
+    if not MLFLOW_AVAILABLE:
+        logger.info("MLflow is disabled or not available, skipping metrics logging")
+        return
+        
     try:
         for key, value in metrics.items():
             mlflow.log_metric(key, value)
@@ -124,6 +150,10 @@ def log_model(model, model_path, model_name="lightgbm_model", registered_model_n
     str
         The run ID of the MLflow run.
     """
+    if not MLFLOW_AVAILABLE:
+        logger.info("MLflow is disabled or not available, skipping model logging")
+        return None
+        
     try:
         # Log the model artifact
         mlflow.lightgbm.log_model(
@@ -164,6 +194,10 @@ def get_latest_model_version(model_name):
     model_version : str
         The latest version of the model.
     """
+    if not MLFLOW_AVAILABLE:
+        logger.info("MLflow is disabled or not available, cannot get model version")
+        return None
+        
     try:
         client = MlflowClient()
         latest_version = client.get_latest_versions(model_name, stages=["None"])[0].version
@@ -193,6 +227,10 @@ def transition_model_stage(model_name, version, stage="Production"):
     bool
         True if successful, False otherwise.
     """
+    if not MLFLOW_AVAILABLE:
+        logger.info("MLflow is disabled or not available, cannot transition model stage")
+        return False
+        
     try:
         client = MlflowClient()
         client.transition_model_version_stage(

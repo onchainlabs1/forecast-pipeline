@@ -19,8 +19,22 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 import pandas as pd
-import mlflow
 import joblib
+
+# Check if MLflow should be disabled
+DISABLE_MLFLOW = os.getenv("DISABLE_MLFLOW", "false").lower() == "true"
+
+# Conditional import of MLflow
+if not DISABLE_MLFLOW:
+    try:
+        import mlflow
+        MLFLOW_AVAILABLE = True
+    except ImportError:
+        logging.warning("MLflow not installed, MLflow functionality will be disabled")
+        MLFLOW_AVAILABLE = False
+else:
+    logging.info("MLflow disabled by environment variable")
+    MLFLOW_AVAILABLE = False
 
 # Add project root to path
 PROJECT_DIR = Path(__file__).resolve().parents[2]
@@ -144,9 +158,12 @@ def check_model_health(model_name: str, config: Dict[str, Any]) -> bool:
         logger.error("Failed to load latest data for monitoring")
         return False
     
+    # Determine if MLflow is available for logging
+    log_to_mlflow = MLFLOW_AVAILABLE and not DISABLE_MLFLOW
+    
     # Check for data drift
     logger.info("Checking for data drift")
-    drift_metrics = monitor.check_data_drift(latest_data, log_to_mlflow=True)
+    drift_metrics = monitor.check_data_drift(latest_data, log_to_mlflow=log_to_mlflow)
     
     # Get latest performance metrics
     latest_metrics = get_latest_metrics()
@@ -156,7 +173,7 @@ def check_model_health(model_name: str, config: Dict[str, Any]) -> bool:
     
     # Check for performance drift
     logger.info("Checking for performance drift")
-    performance_drift = monitor.check_performance_drift(latest_metrics, log_to_mlflow=True)
+    performance_drift = monitor.check_performance_drift(latest_metrics, log_to_mlflow=log_to_mlflow)
     
     # Check if model needs retraining
     needs_retraining, reason = monitor.needs_retraining()

@@ -21,7 +21,21 @@ import lightgbm as lgb
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.model_selection import TimeSeriesSplit
 import joblib
-import mlflow
+
+# Check if MLflow should be disabled
+DISABLE_MLFLOW = os.getenv("DISABLE_MLFLOW", "false").lower() == "true"
+
+# Conditional import of MLflow
+if not DISABLE_MLFLOW:
+    try:
+        import mlflow
+        MLFLOW_AVAILABLE = True
+    except ImportError:
+        logging.warning("MLflow not installed, MLflow functionality will be disabled")
+        MLFLOW_AVAILABLE = False
+else:
+    logging.info("MLflow disabled by environment variable")
+    MLFLOW_AVAILABLE = False
 
 # Import utilities
 # Modified import to work with the modified sys.path
@@ -157,117 +171,141 @@ def train_lightgbm_model(X, y, n_splits=5):
             'verbose': -1,
         }
         
-        # Set up MLflow
-        experiment_id = setup_mlflow()
+        # Check if MLflow is available
+        experiment_id = None
+        if MLFLOW_AVAILABLE and not DISABLE_MLFLOW:
+            # Set up MLflow
+            experiment_id = setup_mlflow()
+            logger.info(f"MLflow experiment ID: {experiment_id}")
+        else:
+            logger.info("MLflow is disabled or not available, continuing without it")
         
-        # Start MLflow run
-        with mlflow.start_run(experiment_id=experiment_id) as run:
-            # Log model parameters
-            log_model_params(params)
-            
-            # Log dataset info
-            mlflow.log_param("n_samples", X.shape[0])
-            mlflow.log_param("n_features", X.shape[1])
-            mlflow.log_param("cv_folds", n_splits)
-            
-            # Time series cross-validation
-            tscv = TimeSeriesSplit(n_splits=n_splits)
-            cv_scores = {
-                'rmse': [],
-                'mae': [],
-            }
-            
-            # Store feature importances across folds
-            feature_importances = pd.DataFrame(0, index=X.columns, columns=['importance'])
-            
-            for fold, (train_idx, val_idx) in enumerate(tscv.split(X)):
-                X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
-                y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+        # Use MLflow if available
+        mlflow_run = None
+        if experiment_id is not None:
+            try:
+                # Start MLflow run
+                mlflow_run = mlflow.start_run(experiment_id=experiment_id)
                 
-                # Create dataset for LightGBM
-                train_data = lgb.Dataset(X_train, label=y_train)
-                val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
+                # Log model parameters
+                log_model_params(params)
                 
-                # Train model - fixing the training parameters
-                callbacks = [lgb.early_stopping(50, verbose=False)]
-                model = lgb.train(
-                    params,
-                    train_data,
-                    valid_sets=[train_data, val_data],
-                    valid_names=['train', 'valid'],
-                    callbacks=callbacks,
-                )
-                
-                # Predictions
-                y_pred = model.predict(X_val, num_iteration=model.best_iteration)
-                
-                # Calculate metrics
-                rmse = np.sqrt(mean_squared_error(y_val, y_pred))
-                mae = mean_absolute_error(y_val, y_pred)
-                
-                cv_scores['rmse'].append(rmse)
-                cv_scores['mae'].append(mae)
-                
-                # Log fold metrics
-                mlflow.log_metric(f"fold_{fold+1}_rmse", rmse)
-                mlflow.log_metric(f"fold_{fold+1}_mae", mae)
-                
-                # Accumulate feature importances
-                fold_importances = pd.DataFrame({
-                    'feature': X.columns,
-                    'importance': model.feature_importance()
-                }).set_index('feature')
-                
-                feature_importances['importance'] += fold_importances['importance']
-                
-                logger.info(f"Fold {fold+1} scores - RMSE: {rmse:.4f}, MAE: {mae:.4f}")
+                # Log dataset info
+                mlflow.log_param("n_samples", X.shape[0])
+                mlflow.log_param("n_features", X.shape[1])
+                mlflow.log_param("cv_folds", n_splits)
+            except Exception as e:
+                logger.error(f"Error starting MLflow run: {e}")
+                mlflow_run = None
+        
+        # Time series cross-validation
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+        cv_scores = {
+            'rmse': [],
+            'mae': [],
+        }
+        
+        # Store feature importances across folds
+        feature_importances = pd.DataFrame(0, index=X.columns, columns=['importance'])
+        
+        for fold, (train_idx, val_idx) in enumerate(tscv.split(X)):
+            X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+            y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
             
-            # Calculate average feature importances
-            feature_importances['importance'] /= n_splits
-            feature_importances = feature_importances.sort_values(
-                by='importance', ascending=False
-            )
+            # Create dataset for LightGBM
+            train_data = lgb.Dataset(X_train, label=y_train)
+            val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
             
-            # Log top 20 feature importances
-            for feature, importance in feature_importances.head(20).iterrows():
-                mlflow.log_metric(f"importance_{feature}", importance['importance'])
-            
-            # Save feature importances plot
-            import matplotlib.pyplot as plt
-            plt.figure(figsize=(10, 8))
-            feature_importances.head(20).plot(kind='barh', figsize=(10, 8))
-            plt.title('Feature Importances (Average across CV folds)')
-            plt.tight_layout()
-            feature_imp_path = REPORTS_DIR / "feature_importances.png"
-            plt.savefig(feature_imp_path)
-            mlflow.log_artifact(str(feature_imp_path), "plots")
-            
-            # Final metrics
-            metrics = {
-                'rmse_mean': np.mean(cv_scores['rmse']),
-                'rmse_std': np.std(cv_scores['rmse']),
-                'mae_mean': np.mean(cv_scores['mae']),
-                'mae_std': np.std(cv_scores['mae']),
-            }
-            
-            # Log overall metrics
-            log_model_metrics(metrics)
-            
-            logger.info(f"Mean RMSE: {metrics['rmse_mean']:.4f} ± {metrics['rmse_std']:.4f}")
-            logger.info(f"Mean MAE: {metrics['mae_mean']:.4f} ± {metrics['mae_std']:.4f}")
-            
-            # Train final model on all data
-            final_train_data = lgb.Dataset(X, label=y)
-            final_model = lgb.train(
+            # Train model - fixing the training parameters
+            callbacks = [lgb.early_stopping(50, verbose=False)]
+            model = lgb.train(
                 params,
-                final_train_data,
-                num_boost_round=model.best_iteration,
+                train_data,
+                valid_sets=[train_data, val_data],
+                valid_names=['train', 'valid'],
+                callbacks=callbacks,
             )
             
-            return final_model, metrics, params
+            # Get predictions
+            val_preds = model.predict(X_val)
+            
+            # Calculate metrics
+            rmse = np.sqrt(mean_squared_error(y_val, val_preds))
+            mae = mean_absolute_error(y_val, val_preds)
+            cv_scores['rmse'].append(rmse)
+            cv_scores['mae'].append(mae)
+            
+            # Add feature importance from this fold
+            fold_importance = pd.Series(model.feature_importance(), index=X.columns)
+            feature_importances['importance'] += fold_importance
+            
+            logger.info(f"Fold {fold+1}/{n_splits} - RMSE: {rmse:.4f}, MAE: {mae:.4f}")
+        
+        # Average feature importance across folds
+        feature_importances['importance'] /= n_splits
+        feature_importances = feature_importances.sort_values('importance', ascending=False)
+        
+        # Calculate average metrics across folds
+        metrics = {
+            'rmse': np.mean(cv_scores['rmse']),
+            'mae': np.mean(cv_scores['mae']),
+            'rmse_std': np.std(cv_scores['rmse']),
+            'mae_std': np.std(cv_scores['mae']),
+        }
+        
+        # Train final model on full dataset
+        logger.info("Training final model on full dataset")
+        train_data = lgb.Dataset(X, label=y)
+        final_model = lgb.train(params, train_data)
+        
+        # Log metrics and model if MLflow is available
+        if mlflow_run is not None:
+            try:
+                # Log metrics
+                log_model_metrics(metrics)
+                
+                # Log feature importance
+                for feature, importance in feature_importances.iterrows():
+                    mlflow.log_metric(f"importance_{feature}", importance['importance'])
+                
+                # Create and save feature importance plot
+                import matplotlib.pyplot as plt
+                plt.figure(figsize=(10, 8))
+                plt.barh(feature_importances.head(20).index, 
+                        feature_importances.head(20)['importance'])
+                plt.title('Top 20 Feature Importance')
+                plt.tight_layout()
+                
+                # Save plot
+                feature_imp_path = REPORTS_DIR / "feature_importance.png"
+                plt.savefig(feature_imp_path)
+                plt.close()
+                
+                # Log plot to MLflow
+                mlflow.log_artifact(str(feature_imp_path))
+                
+                # Log model to MLflow
+                model_path = MODELS_DIR / "lightgbm_model.pkl"
+                joblib.dump(final_model, model_path)
+                log_model(final_model, str(model_path), "lightgbm_model", "store-sales-forecaster")
+                
+            except Exception as e:
+                logger.error(f"Error logging to MLflow: {e}")
+            finally:
+                if mlflow_run:
+                    mlflow.end_run()
+        else:
+            # If MLflow is not available, just save the model
+            model_path = MODELS_DIR / "lightgbm_model.pkl"
+            joblib.dump(final_model, model_path)
+            logger.info(f"Model saved to {model_path}")
+        
+        logger.info(f"Cross-validation results - RMSE: {metrics['rmse']:.4f} (±{metrics['rmse_std']:.4f}), MAE: {metrics['mae']:.4f} (±{metrics['mae_std']:.4f})")
+        
+        return final_model, metrics, params
     
     except Exception as e:
-        logger.error(f"Error during model training: {e}")
+        logger.error(f"Error training model: {e}")
         return None, None, None
 
 

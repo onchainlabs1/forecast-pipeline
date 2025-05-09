@@ -20,7 +20,21 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import ks_2samp
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-import mlflow
+
+# Verify if MLflow should be disabled
+DISABLE_MLFLOW = os.getenv("DISABLE_MLFLOW", "false").lower() == "true"
+
+# Conditional import of MLflow
+if not DISABLE_MLFLOW:
+    try:
+        import mlflow
+        MLFLOW_AVAILABLE = True
+    except ImportError:
+        logging.warning("MLflow not installed, MLflow functionality will be disabled")
+        MLFLOW_AVAILABLE = False
+else:
+    logging.info("MLflow disabled by environment variable")
+    MLFLOW_AVAILABLE = False
 
 # Set up logging
 logging.basicConfig(
@@ -276,17 +290,23 @@ class ModelMonitor:
         with open(metrics_path, "w") as f:
             json.dump(drift_metrics, f, indent=2)
         
-        # Log to MLflow if requested
-        if log_to_mlflow:
+        # Log drift metrics to MLflow if enabled
+        if log_to_mlflow and MLFLOW_AVAILABLE:
             try:
-                with mlflow.start_run(run_name=f"drift_monitoring_{timestamp}"):
-                    mlflow.log_metric("overall_drift_score", drift_metrics["overall_drift_score"])
-                    mlflow.log_metric("drift_detected", int(drift_metrics["drift_detected"]))
+                with mlflow.start_run(run_name=f"drift_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+                    mlflow.log_param("model_name", self.model_name)
+                    mlflow.log_param("timestamp", drift_metrics["timestamp"])
+                    mlflow.log_param("n_rows", drift_metrics["n_rows"])
                     
+                    mlflow.log_metric("overall_drift_score", drift_metrics["overall_drift_score"])
+                    mlflow.log_param("drift_detected", drift_metrics["drift_detected"])
+                    
+                    # Log numerical drift metrics
                     for col, metrics in drift_metrics["numerical_drift"].items():
                         mlflow.log_metric(f"drift_{col}_ks", metrics["ks_statistic"])
+                        mlflow.log_metric(f"drift_{col}_p_value", metrics["p_value"])
             except Exception as e:
-                logger.warning(f"Failed to log drift metrics to MLflow: {e}")
+                logger.error(f"Error logging drift metrics to MLflow: {e}")
         
         # Generate alert if drift detected
         if drift_metrics["drift_detected"]:
@@ -306,7 +326,7 @@ class ModelMonitor:
         current_metrics : Dict[str, float]
             Current model performance metrics
         log_to_mlflow : bool
-            Whether to log performance drift to MLflow
+            Whether to log drift metrics to MLflow
             
         Returns
         -------
@@ -354,17 +374,23 @@ class ModelMonitor:
         with open(metrics_path, "w") as f:
             json.dump(performance_drift, f, indent=2)
         
-        # Log to MLflow if requested
-        if log_to_mlflow:
+        # Log to MLflow if enabled
+        if log_to_mlflow and MLFLOW_AVAILABLE:
             try:
-                with mlflow.start_run(run_name=f"performance_monitoring_{timestamp}"):
-                    mlflow.log_metric("performance_drift_detected", int(performance_drift["drift_detected"]))
+                with mlflow.start_run(run_name=f"perf_drift_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+                    mlflow.log_param("model_name", self.model_name)
+                    mlflow.log_param("timestamp", performance_drift["timestamp"])
                     
-                    for metric, values in performance_drift["metrics_diff"].items():
-                        mlflow.log_metric(f"{metric}_rel_diff", values["rel_diff"])
-                        mlflow.log_metric(f"{metric}_current", values["current"])
+                    for metric, value in performance_drift["metrics_diff"].items():
+                        mlflow.log_metric(f"current_{metric}", value["current"])
+                        mlflow.log_metric(f"baseline_{metric}", value["baseline"])
+                        mlflow.log_metric(f"diff_{metric}", value["abs_diff"])
+                        mlflow.log_metric(f"pct_diff_{metric}", value["rel_diff"])
+                    
+                    mlflow.log_metric("overall_degradation", float(performance_drift["drift_detected"]))
+                    mlflow.log_param("degradation_detected", performance_drift["drift_detected"])
             except Exception as e:
-                logger.warning(f"Failed to log performance metrics to MLflow: {e}")
+                logger.error(f"Error logging performance drift metrics to MLflow: {e}")
         
         # Generate alert if drift detected
         if performance_drift["drift_detected"]:
