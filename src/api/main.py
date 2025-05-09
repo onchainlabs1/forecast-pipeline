@@ -10,7 +10,7 @@ import sys
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 import pandas as pd
 import numpy as np
@@ -412,10 +412,11 @@ def save_prediction(store_nbr, family, date, prediction, username):
             prediction_record = Prediction(
                 store_id=store.id,
                 family_id=family_obj.id,
-                date=prediction_date,
-                value=float(prediction),
-                created_by=username,
-                created_at=datetime.now()
+                prediction_date=datetime.now(),
+                target_date=prediction_date,
+                onpromotion=False,
+                predicted_sales=float(prediction),
+                model_version="1.0.0"
             )
             
             # Save to database
@@ -852,10 +853,10 @@ async def get_metrics_summary(
                     try:
                         metric_record = ModelMetric(
                             model_name="current",
+                            model_version="1.0.0",
                             metric_name="forecast_accuracy",
                             metric_value=float(forecast_accuracy),
-                            data_points=count,
-                            created_at=datetime.now()
+                            timestamp=datetime.now()
                         )
                         db.add(metric_record)
                         db.commit()
@@ -1332,13 +1333,14 @@ async def get_store_comparison(
                             try:
                                 metric_record = ModelMetric(
                                     model_name="current",
+                                    model_version="1.0.0",
                                     metric_name="forecast_accuracy",
                                     metric_value=float(store_accuracy),
-                                    data_points=count,
-                                    created_at=datetime.now()
+                                    timestamp=datetime.now()
                                 )
                                 db.add(metric_record)
                                 db.commit()
+                                logger.info(f"Accuracy calculation saved to database: {store_accuracy:.2f}%")
                             except Exception as db_error:
                                 logger.error(f"Error saving accuracy metric to database: {db_error}")
                                 db.rollback()
@@ -1839,9 +1841,7 @@ async def get_model_drift(
 
 def generate_features(store_nbr, family, onpromotion, date):
     """
-    Generate features for a single prediction.
-    
-    This function ensures exactly 81 features are generated to match the model's expectations.
+    Generate features for the given store, family, promotion status, and date.
     
     Parameters
     ----------
@@ -1851,27 +1851,25 @@ def generate_features(store_nbr, family, onpromotion, date):
         Product family
     onpromotion : bool
         Whether the item is on promotion
-    date : datetime
-        Date for prediction
+    date : datetime or str
+        Prediction date
         
     Returns
     -------
-    numpy.ndarray
-        Array with features for prediction
+    np.ndarray
+        Array of features for the model
     """
     try:
-        logger.info(f"Generating features for: store_nbr={store_nbr}, family={family}, onpromotion={onpromotion}, date={date}")
-        
-        # Create a fixed array with exactly 81 features (the number expected by the model)
+        # Initialize feature array (81 features)
         features = np.zeros(81)
         
-        # Set basic features directly in the array
-        features[0] = 1 if onpromotion else 0  # onpromotion
+        # Set a feature to indicate onpromotion
+        features[0] = 1 if onpromotion else 0
         
         # Convert date to datetime if it's a string
         if isinstance(date, str):
             date = datetime.strptime(date, "%Y-%m-%d")
-        elif isinstance(date, datetime.date) and not isinstance(date, datetime.datetime):
+        elif isinstance(date, date) and not isinstance(date, datetime):
             date = datetime.combine(date, datetime.min.time())
         
         # Basic date features with real values (will create meaningful variation)
@@ -2005,17 +2003,17 @@ def get_feature_names():
     list
         List of feature names
     """
-    # Basic time features
+    # Basic time features - 8 features
     features = [
         'onpromotion', 'year', 'month', 'day', 'dayofweek',
         'dayofyear', 'quarter', 'is_weekend'
     ]
     
-    # Store features
+    # Store features (indices 8-61, 54 stores) - 54 features
     for i in range(1, 55):  # Assuming 54 stores
         features.append(f'store_{i}')
     
-    # Family features
+    # Family features (indices 62-93, 32 families) - 32 features
     families = [
         'AUTOMOTIVE', 'BABY CARE', 'BEAUTY', 'BEVERAGES', 'BOOKS', 
         'BREAD/BAKERY', 'CELEBRATION', 'CLEANING', 'DAIRY', 'DELI', 
@@ -2044,11 +2042,11 @@ def get_feature_names():
     features.extend([
         'sales_rolling_mean_7d', 'sales_rolling_std_7d',
         'sales_rolling_mean_14d', 'sales_rolling_std_14d',
-        'sales_rolling_mean_30d', 'sales_rolling_std_30d'
+        'sales_rolling_max_7d', 'sales_rolling_min_7d'
     ])
     
     # Trend features
-    features.extend(['sales_trend_14d', 'sales_trend_30d'])
+    features.extend(['sales_trend_month', 'sales_trend_store'])
     
     # Cyclical encodings
     features.extend([
@@ -2057,7 +2055,15 @@ def get_feature_names():
         'dayofweek_sin', 'dayofweek_cos'
     ])
     
-    # Ensure we have the expected number of features
+    # Ensure we have exactly 81 features to match the model
+    if len(features) > 81:
+        features = features[:81]
+    elif len(features) < 81:
+        # Add padding features if needed
+        for i in range(len(features), 81):
+            features.append(f'feature_padding_{i}')
+    
+    # Log the feature count
     logger.info(f"Total feature count: {len(features)}")
     if len(features) != 81:
         logger.warning(f"Expected 81 features, but got {len(features)}. Model may not work correctly.")
@@ -2217,7 +2223,7 @@ async def get_metrics_accuracy_check(
             pred = record.predicted_sales
             actual = record.actual_sales
             
-            # Skip records with zero actual sales to avoid division by zero
+            # Skip records with zero or negative actual sales to avoid division by zero or negative percentages
             if actual <= 0:
                 continue
                 
@@ -2248,7 +2254,10 @@ async def get_metrics_accuracy_check(
         
         # Calculate overall metrics
         if count > 0:
-            mape = (total_absolute_error / count) / (sum(r["actual"] for r in detailed_results) / count) * 100
+            # Calculate MAPE safely
+            total_percentage_error = sum(r["percentage_error"] for r in detailed_results)
+            mape = total_percentage_error / count
+            
             mae = total_absolute_error / count
             rmse = (total_squared_error / count) ** 0.5
             mean_error = total_error / count
