@@ -1,7 +1,7 @@
 # API e Servidor
 fastapi==0.100.0
 uvicorn==0.22.0
-pydantic==2.0.3
+pydantic==1.10.8
 python-multipart==0.0.6
 python-jose==3.3.0
 passlib==1.7.4
@@ -27,6 +27,5 @@ shap==0.42.1
 # Utilidades
 python-dotenv==1.0.0
 requests==2.31.0
-pytest==7.4.2
 httpx==0.22.0
 joblib==1.2.0 
