@@ -19,7 +19,7 @@ from src.dashboard.app import main
 
 # Set environment variables if needed
 if "API_URL" not in os.environ:
-    os.environ["API_URL"] = "https://your-api-url.com"  # Replace with your deployed API URL
+    os.environ["API_URL"] = "https://forecast-pipeline-2.onrender.com"  # API no Render
 
 if "MLFLOW_URL" not in os.environ:
     os.environ["MLFLOW_URL"] = "https://your-mlflow-url.com"  # Replace with your MLflow URL
