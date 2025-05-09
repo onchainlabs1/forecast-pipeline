@@ -1,5 +1,5 @@
 # API e Servidor
-fastapi==0.100.0
+fastapi==0.95.2
 uvicorn==0.22.0
 pydantic==1.10.8
 python-multipart==0.0.6
