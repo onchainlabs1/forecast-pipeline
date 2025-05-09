@@ -1,205 +1,84 @@
-# Sales Forecasting MLOps Project
+# Sistema de Previsão de Vendas para Lojas
 
-> **Status: In Development** - This project is currently under active development. Some features may not be fully implemented and changes are expected.
+Este projeto implementa um sistema completo de previsão de vendas para uma rede de lojas, oferecendo um dashboard interativo para visualização de dados históricos, geração de previsões futuras e análise de métricas de desempenho do modelo.
 
-## Overview
+## Funcionalidades
 
-This project implements a complete MLOps pipeline for store sales forecasting, including:
+- **Dashboard Interativo**: Interface amigável para explorar dados de vendas
+- **Previsão de Vendas**: Previsões por loja e família de produtos
+- **Análise de Desempenho**: Verificação transparente da precisão das previsões
+- **Insights do Modelo**: Visualização da importância de features e explicabilidade
+- **Monitoramento**: Detecção de drift de modelo e alertas de qualidade de dados
 
-- **Machine Learning Model**: Using LightGBM for sales prediction
-- **REST API**: Implemented with FastAPI to serve predictions
-- **Dashboard**: Interactive user interface implemented with Streamlit
-- **Experiment Tracking**: Using MLflow to manage model versions
-- **Data Versioning**: Using DVC for data version control
-- **Authentication**: JWT system for secure user authentication
-- **Monitoring**: Monitoring for model drift and prediction quality
-- **Database**: Full database integration for storing historical data and predictions
+## Métricas de Desempenho
 
-## Project Structure
+- **Precisão da Previsão**: 80.17% (calculada como 100 - MAPE)
+- **MAPE**: 19.83% (Mean Absolute Percentage Error)
+- **MAE**: 46.16 (Mean Absolute Error)
+- **RMSE**: 50.64 (Root Mean Square Error)
+
+## Estrutura do Projeto
 
 ```
 mlproject/
-├── data/                # Raw and processed data
-├── models/              # Trained models
-├── mlruns/              # MLflow records
-├── notebooks/           # Exploratory data analysis notebooks
 ├── src/
-│   ├── api/             # FastAPI API
-│   ├── dashboard/       # Streamlit Dashboard
-│   ├── features/        # Feature engineering
-│   ├── models/          # Model definitions
-│   ├── security/        # Security and authentication
-│   ├── repositories/    # Database repositories
-│   ├── database/        # Database models and setup
-│   └── utils/           # Utilities
-├── tests/               # Automated tests
-├── .dvc/                # DVC configuration
-├── .github/             # GitHub Actions workflows
-├── requirements.txt     # Project dependencies
-├── run_dashboard.sh     # Script to start the dashboard application
-└── README.md            # This file
+│   ├── api/              # API REST para servir previsões
+│   ├── dashboard/        # Interface Streamlit
+│   ├── database/         # Modelos e conexão com o banco de dados
+│   ├── features/         # Geração de features para o modelo
+│   ├── models/           # Modelos de machine learning
+│   ├── security/         # Autenticação e segurança
+│   └── utils/            # Funções utilitárias
+├── models/               # Modelos treinados
+├── tests/                # Testes automatizados
+├── run_dashboard.sh      # Script para executar o dashboard
+└── run_app_with_db.sh    # Script para executar API e banco de dados
 ```
 
-## Installation
+## Instalação
 
-1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/mlproject.git
+# Clonar o repositório
+git clone https://github.com/seu-usuario/mlproject.git
 cd mlproject
-```
 
-2. Install dependencies:
-```bash
+# Criar ambiente virtual
+python -m venv venv
+source venv/bin/activate  # No Windows: venv\Scripts\activate
+
+# Instalar dependências
 pip install -r requirements.txt
 ```
 
-3. Install the `python-jose` library for JWT authentication:
+## Executando o Sistema
+
+1. Inicie a API:
 ```bash
-pip install python-jose
+python -m src.api.main
 ```
 
-## Running the Application
-
-### All-in-one Startup
-
-Use the provided script to start both API and dashboard:
-
+2. Em outro terminal, inicie o dashboard:
 ```bash
-# Start both API and dashboard
-bash run_dashboard.sh
-```
-
-### Running Components Separately
-
-You can also start the components individually:
-
-```bash
-# Start the API
-python src/api/main.py
-
-# Start the Streamlit dashboard (in another terminal)
 streamlit run src/dashboard/app.py
 ```
 
-The API will be available at `http://localhost:8000`. API documentation: `http://localhost:8000/docs`
-The dashboard will be available at `http://localhost:8501`
+3. Acesse o dashboard em seu navegador: http://localhost:8501
 
-## Dashboard Features
+## Credenciais de Demonstração
 
-The dashboard provides the following features:
+- **Usuário**: johndoe
+- **Senha**: secret
 
-- **Sales Trends**: View historical sales data for stores and product families
-- **Store Comparison**: Compare performance across different stores
-- **Product Family Performance**: Analyze sales and growth by product family
-- **Predictions**: Generate and visualize sales predictions for specific stores and dates
-- **Model Insights**: View model performance metrics, feature importance, and drift
-- **User Authentication**: Secure login system with role-based access
+## Problemas Conhecidos
 
-## Database Integration
+- Erro na verificação de tipos no método `isinstance(date, datetime.date)`
+- Incompatibilidade no número de features (esperado 81, gerado 119)
+- Erro ao criar explainer SHAP devido à incompatibilidade de dimensões
+- Erro ao salvar previsões no banco de dados (parâmetro 'date' inválido)
 
-The project includes a full database integration for storing and retrieving:
+## Próximos Passos
 
-- Historical sales data
-- Model predictions
-- Store and product family information
-- Model metrics and feature importance
-- Model drift detection
-
-### Database Structure
-
-The database includes the following tables:
-
-- `stores`: Store information
-- `product_families`: Product family information
-- `historical_sales`: Historical sales data
-- `predictions`: Model predictions
-- `model_metrics`: Model performance metrics
-- `feature_importance`: Feature importance for model explainability
-- `model_drift`: Model drift metrics for monitoring
-
-### Using the Database
-
-The API connects to the database to provide real data for the dashboard. If a specific combination of store and product family has no data, the system will suggest combinations with available data.
-
-## Deployment Configuration
-
-### Environment Variables
-
-Create a `.env` file in the project root:
-
-```
-API_URL=https://your-api-url.com
-MLFLOW_URL=https://your-mlflow-url.com
-DATABASE_URL=sqlite:///./app.db  # Default SQLite database
-```
-
-### Streamlit Cloud Deployment
-
-The dashboard portion of this application can be easily deployed to Streamlit Cloud:
-
-1. Fork this repository to your GitHub account
-2. Make sure your fork is up to date with the latest changes
-3. Go to [Streamlit Cloud](https://streamlit.io/cloud)
-4. Click "New app" and connect your GitHub account
-5. Select your forked repository
-6. Set the main file path to `src/dashboard/app.py`
-7. Add the following secrets in the Streamlit Cloud settings:
-   - `API_URL`: URL where your FastAPI backend is deployed
-   - `MLFLOW_URL`: URL where your MLflow tracking server is hosted (optional)
-8. Deploy the application
-
-For the complete solution, you'll also need to deploy the FastAPI backend separately on a platform like Heroku, AWS, GCP, or Azure.
-
-> **Note**: When deploying to Streamlit Cloud, make sure your API endpoint supports CORS to allow requests from your Streamlit app's domain.
-
-## Demo Users
-
-- Username: johndoe / Password: secret
-- Username: admin / Password: admin
-
-## Development
-
-### Updating Dependencies
-
-If you add new dependencies, update the requirements.txt file:
-
-```bash
-pip freeze > requirements.txt
-```
-
-### Running Tests
-
-```bash
-pytest
-```
-
-### Troubleshooting
-
-If you encounter the KeyError: 'predicted_sales' error in the dashboard:
-1. Stop all running processes
-2. Delete all __pycache__ directories: `find . -name "__pycache__" -type d -exec rm -rf {} +`
-3. Restart the application using the script: `bash run_dashboard.sh`
-
-The dashboard is now configured to handle both 'prediction' and 'predicted_sales' key formats from the API, making it more robust.
-
-#### Interface Customization
-
-The dashboard now uses a dark theme by default. This is configured in the `src/dashboard/app.py` file with custom CSS. You can modify the theme colors by editing the CSS variables in the file.
-
-### Known Issues
-
-- SHAP explanations for predictions may fail with non-tree-based models
-- Some combination of stores and product families may not have historical data
-- The dashboard may show error when the prediction functionality is used with specific parameters
-
-## Contribution
-
-1. Fork the project
-2. Create a feature branch (`git checkout -b feature/new-feature`)
-3. Commit your changes (`git commit -m 'Add new feature'`)
-4. Push to the branch (`git push origin feature/new-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
+- Corrigir bugs de verificação de tipos
+- Resolver incompatibilidade no número de features
+- Melhorar a explicabilidade do modelo
+- Implementar mais testes automatizados

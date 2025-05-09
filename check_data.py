@@ -1,58 +1,52 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from src.database.database import db_session
-from src.database.models import Store, ProductFamily, HistoricalSales
+"""
+Simple script to check if the test data is available in the API.
+"""
 
-def main():
-    """Verifica combinações de loja/família existentes no banco de dados."""
-    print("Verificando combinações de loja/família existentes...")
+import requests
+import json
+
+# API URL
+API_URL = "http://localhost:8000"
+
+# Get token
+print("Getting token...")
+response = requests.post(
+    f"{API_URL}/token",
+    data={"username": "johndoe", "password": "secret"}
+)
+
+if response.status_code == 200:
+    token_data = response.json()
+    token = token_data["access_token"]
+    print("Token obtained successfully.")
     
-    with db_session() as db:
-        # Buscar todas as combinações existentes
-        result = db.query(Store.store_nbr, ProductFamily.name)\
-            .join(HistoricalSales, HistoricalSales.store_id == Store.id)\
-            .join(ProductFamily, HistoricalSales.family_id == ProductFamily.id)\
-            .distinct()\
-            .all()
-        
-        if not result:
-            print("Nenhuma combinação encontrada!")
-            return
+    # Check metrics accuracy
+    print("\nChecking metrics accuracy...")
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(f"{API_URL}/metrics_accuracy_check", headers=headers)
+    
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            summary = data.get("summary", {})
             
-        print(f"Encontradas {len(result)} combinações loja/família:")
-        for r in result:
-            print(f"Store: {r[0]}, Family: {r[1]}")
+            print(f"Data points: {summary.get('count', 0)}")
+            print(f"MAPE: {summary.get('mape', 0):.2f}%")
+            print(f"Forecast Accuracy: {summary.get('forecast_accuracy', 0):.2f}%")
             
-        # Verificar algumas combinações específicas
-        combos_to_check = [
-            (1, "PRODUCE"),
-            (1, "FROZEN FOODS"),
-            (1, "GROCERY II"),
-            (1, "LIQUOR,WINE,BEER"),
-            (1, "HOME APPLIANCES")
-        ]
-        
-        print("\nVerificando combinações específicas:")
-        for store_nbr, family_name in combos_to_check:
-            # Buscar store e family
-            store = db.query(Store).filter(Store.store_nbr == store_nbr).first()
-            family = db.query(ProductFamily).filter(ProductFamily.name == family_name).first()
+            print("\nAPI is working correctly!")
             
-            if not store or not family:
-                print(f"Store {store_nbr} ou Family {family_name} não existe")
-                continue
-                
-            # Verificar se existem registros
-            count = db.query(HistoricalSales)\
-                .filter(HistoricalSales.store_id == store.id, 
-                        HistoricalSales.family_id == family.id)\
-                .count()
-                
-            if count > 0:
-                print(f"✅ Store {store_nbr}, Family {family_name}: {count} registros")
+            # Check if we have the expected accuracy
+            if summary.get("forecast_accuracy", 0) >= 75.0:
+                print("\nSUCCESS: The test data is showing in the API with the expected accuracy.")
             else:
-                print(f"❌ Store {store_nbr}, Family {family_name}: nenhum registro")
-
-if __name__ == "__main__":
-    main() 
+                print("\nWARNING: The accuracy is not at the expected level (should be around 80%).")
+        except json.JSONDecodeError:
+            print("Error decoding JSON response.")
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+else:
+    print(f"Error getting token: {response.status_code} - {response.text}") 

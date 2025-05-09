@@ -949,58 +949,173 @@ def render_predictions():
 
 def render_model_insights():
     """
-    Render the model insights page with real data from the API.
+    Render the model insights page.
     """
     st.title("Model Insights")
     
     st.markdown("""
-    This page provides insights into the model performance and feature importance.
+    This page provides insights into the model performance and metrics.
     """)
     
-    # Check API health
-    health = get_health()
-    if health["status"] != "healthy":
-        st.error(f"API is not available: {health.get('message', 'Unknown error')}")
-        st.warning("Please make sure the API is running before viewing model insights.")
-        st.stop()
+    # Accuracy Verification Section
+    st.header("Forecast Accuracy Verification")
     
-    if "token" not in st.session_state:
-        st.error("Please login to view model insights.")
-        st.stop()
+    # Button to verify accuracy calculations
+    if st.button("Verify Forecast Accuracy Calculation"):
+        try:
+            with st.spinner("Retrieving detailed accuracy metrics..."):
+                headers = {"Authorization": f"Bearer {st.session_state.token}"}
+                response = requests.get(f"{API_URL}/metrics_accuracy_check", headers=headers)
+                
+                if response.status_code == 200:
+                    accuracy_data = response.json()
+                    summary = accuracy_data.get("summary", {})
+                    details = accuracy_data.get("detailed_results", [])
+                    
+                    # Display the summary metrics
+                    st.subheader("Accuracy Summary")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        data_points = summary.get("count", 0)
+                        st.metric("Data Points Used", f"{data_points}")
+                        st.metric("MAPE", f"{summary.get('mape', 0):.2f}%")
+                        st.metric("Forecast Accuracy", f"{summary.get('forecast_accuracy', 0):.2f}%")
+                        
+                    with col2:
+                        st.metric("Mean Error", f"{summary.get('mean_error', 0):.2f}")
+                        st.metric("MAE", f"{summary.get('mae', 0):.2f}")
+                        st.metric("RMSE", f"{summary.get('rmse', 0):.2f}")
+                        
+                    st.write(f"**Calculation Method:** {summary.get('calculation_method', 'N/A')}")
+                    
+                    # Display the detailed results
+                    if details:
+                        st.subheader("Sample Data Points")
+                        df = pd.DataFrame(details[:10])  # Show only first 10 for simplicity
+                        
+                        # Reorder columns for better presentation
+                        if not df.empty and set(['store', 'family', 'date', 'predicted', 'actual', 'error', 'percentage_error']).issubset(df.columns):
+                            df = df[['store', 'family', 'date', 'predicted', 'actual', 'error', 'percentage_error']]
+                        
+                        st.dataframe(df)
+                        
+                        # Create error distribution chart
+                        if len(details) >= 5:
+                            st.subheader("Error Distribution")
+                            error_df = pd.DataFrame(details)
+                            
+                            fig = px.histogram(
+                                error_df, 
+                                x="percentage_error",
+                                nbins=20,
+                                title="Percentage Error Distribution",
+                                labels={"percentage_error": "Percentage Error (%)"}
+                            )
+                            
+                            fig.update_layout(
+                                template='plotly_dark',
+                                height=400,
+                                margin=dict(l=10, r=10, t=30, b=10)
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Create scatter plot of predicted vs actual
+                            st.subheader("Predicted vs Actual")
+                            fig = px.scatter(
+                                error_df,
+                                x="actual",
+                                y="predicted",
+                                hover_data=["store", "family", "date", "error", "percentage_error"],
+                                title="Predicted vs Actual Values",
+                                labels={"actual": "Actual Sales", "predicted": "Predicted Sales"}
+                            )
+                            
+                            # Add perfect prediction line
+                            max_val = max(error_df["actual"].max(), error_df["predicted"].max())
+                            fig.add_shape(
+                                type="line",
+                                x0=0, y0=0,
+                                x1=max_val, y1=max_val,
+                                line=dict(color="green", width=2, dash="dash")
+                            )
+                            
+                            fig.update_layout(
+                                template='plotly_dark',
+                                height=500,
+                                margin=dict(l=10, r=10, t=30, b=10)
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.warning("No detailed data points available for verification.")
+                else:
+                    st.error(f"Failed to fetch accuracy metrics: {response.status_code} - {response.text}")
+        except Exception as e:
+            st.error(f"Error verifying accuracy: {str(e)}")
+
+    # Recent Predictions Section
+    st.header("Recent Predictions")
     
-    # Get model list from API
-    try:
-        headers = {"Authorization": f"Bearer {st.session_state.token}"}
-        models_response = requests.get(
-            f"{API_URL}/models",
-            headers=headers
-        )
-        
-        if models_response.status_code == 200:
-            models_data = models_response.json()
-            models = [model["name"] for model in models_data]
-        else:
-            st.warning("Unable to fetch model list from API, using default values.")
-            models = ["LightGBM (Production)", "Prophet (Staging)", "ARIMA (Development)"]
-    except Exception as e:
-        st.warning(f"Error fetching model list: {str(e)}")
-        models = ["LightGBM (Production)", "Prophet (Staging)", "ARIMA (Development)"]
+    # Button to show recent predictions with accuracy
+    if st.button("Show Recent Predictions"):
+        try:
+            with st.spinner("Retrieving recent predictions..."):
+                headers = {"Authorization": f"Bearer {st.session_state.token}"}
+                response = requests.get(f"{API_URL}/recent_predictions", headers=headers)
+                
+                if response.status_code == 200:
+                    predictions = response.json()
+                    
+                    if predictions:
+                        # Convert to DataFrame for easier display
+                        df = pd.DataFrame([
+                            {
+                                "Store": p['store_nbr'],
+                                "Family": p['family'],
+                                "Date": p['date'],
+                                "Predicted": p['predicted_sales'],
+                                "Actual": p['actual_sales'] if p['actual_sales'] is not None else "N/A",
+                                "Error %": p['accuracy_metrics']['percentage_error'] if p['accuracy_metrics'] else "N/A",
+                                "Accuracy": f"{p['accuracy_metrics']['accuracy']:.2f}%" if p['accuracy_metrics'] else "N/A"
+                            } 
+                            for p in predictions
+                        ])
+                        
+                        st.dataframe(df)
+                        
+                        # Calculate overall accuracy from available data points
+                        valid_predictions = [p for p in predictions if p['accuracy_metrics']]
+                        if valid_predictions:
+                            avg_accuracy = sum(p['accuracy_metrics']['accuracy'] for p in valid_predictions) / len(valid_predictions)
+                            st.metric("Average Accuracy (Recent Predictions)", f"{avg_accuracy:.2f}%")
+                        else:
+                            st.warning("No validation data available for recent predictions.")
+                    else:
+                        st.warning("No recent predictions found.")
+                else:
+                    st.error(f"Failed to fetch recent predictions: {response.status_code} - {response.text}")
+        except Exception as e:
+            st.error(f"Error retrieving recent predictions: {str(e)}")
+            
+    # Existing content
+    st.header("Model Metrics")
     
     # Model selection
-    st.subheader("Model Selection")
+    models = ["LightGBM (Production)", "Prophet (Staging)", "ARIMA (Development)"]
     selected_model = st.selectbox("Select Model", models)
     
-    # Get real model performance metrics from API
+    # Load model metrics
     try:
         headers = {"Authorization": f"Bearer {st.session_state.token}"}
-        metrics_response = requests.get(
-            f"{API_URL}/model_metrics",
-            params={"model_name": selected_model},
+        response = requests.get(
+            f"{API_URL}/model_metrics?model_name={selected_model}",
             headers=headers
         )
         
-        if metrics_response.status_code == 200:
-            model_metrics = metrics_response.json()
+        if response.status_code == 200:
+            model_metrics = response.json()
             
             # Model performance metrics
             st.subheader("Performance Metrics")

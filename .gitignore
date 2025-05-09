@@ -1,7 +1,7 @@
 # Python files
 __pycache__/
 *.py[cod]
-*.class
+*$py.class
 *.so
 .Python
 env/
@@ -27,10 +27,11 @@ ENV/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*/.ipynb_checkpoints/*
 
 # Project specific
 mlruns/
-*.pkl
+models/*.pkl
 logs/
 *.log
 
@@ -58,3 +59,13 @@ data/processed/test_features.csv
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Arquivos de banco de dados
+*.db
+*.sqlite3
+
+# Arquivos temporários
+temp/
+tmp/
+check_*.py
+add_test_data.py
