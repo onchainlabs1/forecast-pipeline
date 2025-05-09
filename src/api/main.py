@@ -19,10 +19,22 @@ from fastapi import FastAPI, HTTPException, Query, Depends, Security, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import mlflow
 import uvicorn
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct, and_
+
+# Verificar se o MLflow deve ser desabilitado
+DISABLE_MLFLOW = os.getenv("DISABLE_MLFLOW", "false").lower() == "true"
+
+# Importação condicional do MLflow
+if not DISABLE_MLFLOW:
+    try:
+        import mlflow
+    except ImportError:
+        logging.warning("MLflow not installed, MLflow functionality will be disabled")
+        DISABLE_MLFLOW = True
+else:
+    logging.info("MLflow disabled by environment variable")
 
 # Add project root to sys.path
 project_root = Path(__file__).parents[2]
@@ -160,19 +172,23 @@ def load_model():
             logger.info(f"Loading model from {MODEL_PATH}")
             return joblib.load(MODEL_PATH)
         
-        # If model file doesn't exist, try loading from MLflow
-        logger.info("Model file not found, loading from MLflow")
-        setup_mlflow()
-        
-        try:
-            model = mlflow.pyfunc.load_model(
-                model_uri="models:/store-sales-forecaster/Production"
-            )
-            logger.info("Model loaded from MLflow registry")
-            return model
-        except Exception as e:
-            logger.error(f"Error loading model from MLflow: {e}")
-            raise FileNotFoundError("Model not found in local file or MLflow registry")
+        # If model file doesn't exist and MLflow is enabled, try loading from MLflow
+        if not DISABLE_MLFLOW:
+            logger.info("Model file not found, loading from MLflow")
+            setup_mlflow()
+            
+            try:
+                model = mlflow.pyfunc.load_model(
+                    model_uri="models:/store-sales-forecaster/Production"
+                )
+                logger.info("Model loaded from MLflow registry")
+                return model
+            except Exception as e:
+                logger.error(f"Error loading model from MLflow: {e}")
+                raise FileNotFoundError("Model not found in local file or MLflow registry")
+        else:
+            logger.error("Model file not found and MLflow is disabled")
+            raise FileNotFoundError("Model not found in local file and MLflow is disabled")
     
     except Exception as e:
         logger.error(f"Error loading model: {e}")
@@ -257,11 +273,13 @@ async def startup_event():
     
     logger.info("API starting up")
     try:
-        # Check if MLflow should be disabled
-        disable_mlflow = os.getenv("DISABLE_MLFLOW", "false").lower() == "true"
-        
-        # Initialize MLflow with production flag
-        setup_mlflow(disable_for_production=True)
+        # Log status do MLflow
+        if DISABLE_MLFLOW:
+            logger.info("MLflow is disabled for this deployment")
+        else:
+            # Initialize MLflow
+            setup_mlflow(disable_for_production=True)
+            logger.info("MLflow initialized successfully")
         
         # Load model
         model = load_model()
