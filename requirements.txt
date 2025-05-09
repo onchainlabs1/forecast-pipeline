@@ -1,23 +1,23 @@
 # API e Servidor
-fastapi==0.88.0
-uvicorn==0.20.0
-pydantic==1.10.4
+fastapi==0.78.0
+uvicorn==0.17.6
+pydantic==1.9.1
 python-multipart==0.0.5
 python-jose==3.3.0
 passlib==1.7.4
 bcrypt==4.0.1
 
 # Banco de Dados
-sqlalchemy==1.4.46
-psycopg2-binary==2.9.5
+sqlalchemy==1.4.28
+psycopg2-binary==2.9.3
 
 # Machine Learning
 scikit-learn==1.0.2
-lightgbm==3.3.5
-numpy==1.23.5
-pandas==1.5.3
-joblib==1.2.0
+lightgbm==3.3.2
+numpy==1.22.4
+pandas==1.4.2
+joblib==1.1.0
 
 # Utilidades
-python-dotenv==0.21.1
-requests==2.28.2 
+python-dotenv==0.20.0
+requests==2.27.1 
