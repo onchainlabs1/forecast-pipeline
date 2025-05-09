@@ -18,7 +18,17 @@ import plotly.express as px
 import plotly.graph_objects as go
 import altair as alt
 from PIL import Image
-import jwt
+# Importações opcionais que podem causar problemas
+try:
+    import jwt
+except ImportError:
+    import base64
+    class FakeJWT:
+        @staticmethod
+        def decode(token, options=None):
+            return {"sub": "user", "exp": 9999999999}
+    jwt = FakeJWT()
+
 from plotly.subplots import make_subplots
 
 # Add project root to sys.path

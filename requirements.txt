@@ -1,17 +1,17 @@
 # Dependências essenciais para o dashboard
-streamlit==1.28.0
-pandas==1.3.5
-numpy==1.22.4
-plotly==5.15.0
-requests==2.31.0
-pyjwt==2.8.0
-altair==4.2.2
-pillow==9.5.0
-python-dotenv==0.21.1
+streamlit
+pandas
+numpy
+plotly
+requests
+pyjwt
+altair
+pillow
+python-dotenv
 
 # Apenas dependências essenciais para visualização
-matplotlib==3.5.3
-seaborn==0.12.2
+matplotlib
+seaborn
 
 # Versões exatas que o Streamlit Cloud está instalando
 rich==14.0.0
