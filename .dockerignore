@@ -1,0 +1,33 @@
+# Arquivos e diretórios específicos do git
+.git
+.gitignore
+
+# Diretórios para os modelos
+mlruns
+models/*.pkl
+notebooks
+
+# Diretórios temporários e cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv
+env
+.env
+.venv
+.cache
+.pytest_cache
+
+# Diretórios de mlflow e outros serviços
+mlruns
+airflow
+dags
+
+# Arquivos de logs
+*.log
+
+# Diretórios e arquivos de build
+build/
+*.so 
