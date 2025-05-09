@@ -4,7 +4,7 @@
 
 # Diretórios para os modelos
 mlruns
-models/*.pkl
+# models/*.pkl  # Removido para permitir a inclusão dos modelos
 notebooks
 
 # Diretórios temporários e cache
