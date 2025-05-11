@@ -8,6 +8,7 @@ print("Starting Streamlit dashboard...")
 # Set environment variables
 os.environ["API_URL"] = "http://localhost:8000"
 os.environ["MLFLOW_URL"] = "http://localhost:5000"
+os.environ["DISABLE_MLFLOW"] = "True"  # Desabilitar MLflow para evitar erros
 
 # Run Streamlit
 streamlit_path = "streamlit"

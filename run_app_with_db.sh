@@ -16,9 +16,12 @@ if [ ! -f "data/db/sales_forecasting.db" ]; then
     fi
 fi
 
+# Use the full path to Python from Anaconda
+PYTHON_PATH="/Users/fabio/anaconda3/bin/python"
+
 # Start the API server in the background
 echo "Starting API server..."
-python -m src.api.main &
+$PYTHON_PATH -m src.api.main &
 API_PID=$!
 
 # Wait for API to start
@@ -36,7 +39,7 @@ echo "API server running at http://localhost:8000"
 
 # Start the dashboard
 echo "Starting Streamlit dashboard..."
-python -m src.dashboard.app
+$PYTHON_PATH -m src.dashboard.app
 
 # When the dashboard is closed, stop the API server
 echo "Stopping API server..."

@@ -4,11 +4,8 @@
 
 echo "Initializing database..."
 
-# Check if Python is installed
-if ! command -v python3 &> /dev/null; then
-    echo "Python 3 not found. Please install Python 3 before continuing."
-    exit 1
-fi
+# Use the full path to Python from Anaconda
+PYTHON_PATH="/Users/fabio/anaconda3/bin/python"
 
 # Create the database directory if it doesn't exist
 mkdir -p data/db
@@ -19,7 +16,7 @@ REQUIRED_PACKAGES="sqlalchemy pandas numpy"
 MISSING_PACKAGES=""
 
 for package in $REQUIRED_PACKAGES; do
-    python3 -c "import $package" 2>/dev/null
+    $PYTHON_PATH -c "import $package" 2>/dev/null
     if [ $? -ne 0 ]; then
         MISSING_PACKAGES="$MISSING_PACKAGES $package"
     fi
@@ -27,7 +24,7 @@ done
 
 if [ ! -z "$MISSING_PACKAGES" ]; then
     echo "Installing missing packages:$MISSING_PACKAGES"
-    pip install $MISSING_PACKAGES
+    $PYTHON_PATH -m pip install $MISSING_PACKAGES
 fi
 
 # Create data directories if they don't exist
@@ -35,11 +32,11 @@ mkdir -p data/raw
 
 # Run the database initialization script
 echo "Running database initialization script..."
-python -m src.database.init_db
+$PYTHON_PATH -m src.database.init_db
 
 # Make sure there is sample data in the database
 echo "Checking if sample data is loaded properly..."
-DB_STATUS=$(python -c "
+DB_STATUS=$($PYTHON_PATH -c "
 import sys
 sys.path.append('.')
 from src.database.database import get_db
@@ -59,7 +56,7 @@ echo "Database status: $DB_STATUS"
 # If there's not enough data, force loading the demo data
 if [[ "$DB_STATUS" != *"DB_STATUS: "* ]] || [[ "$DB_STATUS" == *"0 stores"* ]] || [[ "$DB_STATUS" == *"0 families"* ]] || [[ "$DB_STATUS" == *"0 sales"* ]]; then
     echo "Insufficient data detected in the database. Loading sample data..."
-    python -c "
+    $PYTHON_PATH -c "
 import sys
 sys.path.append('.')
 from src.database.data_loader import load_sample_data
@@ -69,7 +66,7 @@ print('Sample data loaded successfully.')
 fi
 
 # Check one more time to make sure data was loaded
-DB_STATUS=$(python -c "
+DB_STATUS=$($PYTHON_PATH -c "
 import sys
 sys.path.append('.')
 from src.database.database import get_db
@@ -88,13 +85,13 @@ echo "Final database status: $DB_STATUS"
 
 echo "Database initialization completed successfully."
 echo "You can now start the API with:"
-echo "  python -m src.api.main"
+echo "  $PYTHON_PATH -m src.api.main"
 echo ""
 echo "Or run the dashboard with:"
-echo "  python -m src.dashboard.app"
+echo "  $PYTHON_PATH -m src.dashboard.app"
 
 # Create run_dashboard.sh script
-cat > run_dashboard.sh << 'EOF'
+cat > run_dashboard.sh << EOF
 #!/bin/bash
 
 # Script to start both API and dashboard
@@ -103,13 +100,13 @@ if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null ; then
     echo "API already running on port 8000"
 else
     echo "Starting API on port 8000..."
-    python -m src.api.main &
+    $PYTHON_PATH -m src.api.main &
     API_PID=$!
     sleep 2
 fi
 
 echo "Starting the dashboard..."
-streamlit run src/dashboard/app.py
+$PYTHON_PATH -m streamlit run src/dashboard/app.py
 
 # If we started the API, kill it when the dashboard closes
 if [ ! -z "$API_PID" ]; then

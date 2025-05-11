@@ -1,5 +1,17 @@
-[server]
-enableCORS = true
+[global]
+showWarningOnDirectExecution = false
+disableWatchdogWarning = true
 
 [theme]
 base = "dark"
+primaryColor = "#FF4B4B"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+enableCORS = true

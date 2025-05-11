@@ -9,4 +9,8 @@ pillow==9.5.0
 python-dotenv==0.21.1
 matplotlib==3.5.3
 seaborn==0.12.2
-pydantic>=1.10.0,<2.0.0 
+rich==13.3.5
+pygments==2.15.1
+markdown-it-py==2.2.0
+mdurl==0.1.2
+pydantic==1.10.8 

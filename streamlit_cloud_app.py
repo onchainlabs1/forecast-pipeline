@@ -14,12 +14,9 @@ from pathlib import Path
 os.environ["API_URL"] = "https://forecast-pipeline-2.onrender.com"
 os.environ["DISABLE_MLFLOW"] = "True"
 
-# Set up the page
-st.set_page_config(page_title="Sales Forecast Dashboard", layout="wide")
-st.title("Sales Forecast Dashboard")
-
+# NÃO CONFIGURAMOS A PÁGINA AQUI - A CONFIG SERÁ FEITA NO app.py
 # Show loading message
-st.info("Connecting to forecast API...")
+st.info("Conectando à API de previsão...")
 
 # Try to import the main module with error handling
 try:
@@ -32,31 +29,31 @@ try:
     try:
         response = requests.get(os.environ["API_URL"] + "/health", timeout=5)
         if response.status_code == 200:
-            st.success(f"Successfully connected to API: {response.json()}")
+            st.success(f"Conectado com sucesso à API: {response.json()}")
         else:
-            st.error(f"API returned error code: {response.status_code}")
+            st.error(f"API retornou código de erro: {response.status_code}")
             st.json(response.json())
     except Exception as api_err:
-        st.error(f"Failed to connect to API: {str(api_err)}")
-        st.warning("The dashboard requires connection to the API. Please check if the API is running.")
+        st.error(f"Falha ao conectar com a API: {str(api_err)}")
+        st.warning("O dashboard requer conexão com a API. Verifique se a API está rodando.")
     
     # Import and run the dashboard 
     try:
         from src.dashboard.app import main
         main()
     except ImportError as e:
-        st.error(f"Failed to import dashboard: {str(e)}")
+        st.error(f"Falha ao importar o dashboard: {str(e)}")
         st.code(f"Python path: {sys.path}")
         
         # List dashboard directory contents
         dashboard_dir = Path("src/dashboard")
         if dashboard_dir.exists():
-            st.write("### Dashboard files:")
+            st.write("### Arquivos do dashboard:")
             for file in dashboard_dir.glob("*"):
                 st.text(f"- {file}")
     
 except Exception as e:
-    st.error(f"Error: {str(e)}")
+    st.error(f"Erro: {str(e)}")
     
     # Show system info for debugging
     st.write("### System Info")

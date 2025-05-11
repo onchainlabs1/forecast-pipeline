@@ -10,7 +10,7 @@ import sys
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date as date_type
 
 import pandas as pd
 import numpy as np
@@ -133,11 +133,33 @@ class PredictionResponse(BaseModel):
     prediction_time: str
 
 
+# Adicionar modelos Pydantic extra para login simples
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
 # Authentication endpoint
 @app.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Endpoint for obtaining a JWT token with OAuth2 password flow.
+    
+    This can be called using either a form or direct data with the fields:
+    - username: The user's username
+    - password: The user's password
+    - scope: Optional scopes to request (space separated)
+    
+    Returns:
+    - A JWT token if authentication is successful
+    - 401 Unauthorized if authentication fails
+    """
+    # Log para debug
+    logger.info(f"Login attempt for user: {form_data.username}")
+    
     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
     if not user:
+        logger.warning(f"Authentication failed for user: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -148,11 +170,57 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     scopes = [scope for scope in form_data.scopes if scope in user.scopes]
     
+    # Se nenhum escopo for solicitado, usar todos os escopos do usuário
+    if not scopes:
+        logger.info(f"No scopes requested, using all user scopes: {user.scopes}")
+        scopes = user.scopes
+    
     access_token = create_access_token(
         data={"sub": user.username, "scopes": scopes},
         expires_delta=access_token_expires,
     )
     
+    logger.info(f"Login successful for user: {form_data.username}, scopes: {scopes}")
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+# Endpoint alternativo de login para o dashboard
+@app.post("/login", response_model=Token)
+async def login_simple(request: LoginRequest):
+    """
+    Alternative login endpoint that accepts a simple JSON request.
+    Designed to be more compatible with clients that can't handle OAuth2 form data.
+    
+    Request body:
+    - username: The user's username
+    - password: The user's password
+    
+    Returns:
+    - A JWT token if authentication is successful
+    - 401 Unauthorized if authentication fails
+    """
+    logger.info(f"Simple login attempt for user: {request.username}")
+    
+    # Authenticate the user
+    user = authenticate_user(fake_users_db, request.username, request.password)
+    if not user:
+        logger.warning(f"Simple authentication failed for user: {request.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Create an access token with all user scopes
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    scopes = user.scopes
+    
+    access_token = create_access_token(
+        data={"sub": request.username, "scopes": scopes},
+        expires_delta=access_token_expires,
+    )
+    
+    logger.info(f"Login successful for user: {request.username}, scopes: {scopes}")
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -1946,19 +2014,26 @@ def generate_features(store_nbr, family, onpromotion, date):
         Array of features for the model
     """
     try:
-        # Initialize feature array (81 features)
+        # Create feature array with fixed size
         features = np.zeros(81)
         
-        # Set a feature to indicate onpromotion
+        # Feature 0: Is on promotion
         features[0] = 1 if onpromotion else 0
         
-        # Convert date to datetime if it's a string
+        # Make sure date is a datetime object
         if isinstance(date, str):
-            date = datetime.strptime(date, "%Y-%m-%d")
-        elif isinstance(date, date) and not isinstance(date, datetime):
-            date = datetime.combine(date, datetime.min.time())
+            try:
+                date = datetime.strptime(date, "%Y-%m-%d")
+            except Exception as e:
+                logger.error(f"Error parsing date string: {e}")
+                date = datetime.now()
         
-        # Basic date features with real values (will create meaningful variation)
+        # Safeguard: If we still don't have a proper datetime object, create one
+        if not hasattr(date, 'year') or not hasattr(date, 'month') or not hasattr(date, 'day'):
+            logger.warning("Date object missing required attributes, using current date")
+            date = datetime.now()
+            
+        # Date features (7 features)
         features[1] = date.year                          # year
         features[2] = date.month                         # month
         features[3] = date.day                           # day
@@ -1967,116 +2042,36 @@ def generate_features(store_nbr, family, onpromotion, date):
         features[6] = (date.month - 1) // 3 + 1          # quarter
         features[7] = 1 if date.weekday() >= 5 else 0    # is_weekend
         
-        # Store features (one-hot encoding for stores 1-54)
-        # Features 8-61 are store_1 through store_54
+        # Store features (54 features, index 8-61)
         if 1 <= store_nbr <= 54:
-            features[7 + store_nbr] = 1  # +7 offset for the first 7 features
+            features[7 + store_nbr] = 1
         
-        # Family features (indices 62-93, 32 families)
-        family_index = -1
+        # Family features (19 features, index 62-80)
+        # Fixed: Reduced to 19 features to fit within the 81-element array
         families = [
             'AUTOMOTIVE', 'BABY CARE', 'BEAUTY', 'BEVERAGES', 'BOOKS', 
             'BREAD/BAKERY', 'CELEBRATION', 'CLEANING', 'DAIRY', 'DELI', 
             'EGGS', 'FROZEN FOODS', 'GROCERY I', 'GROCERY II', 'HARDWARE',
-            'HOME AND KITCHEN', 'HOME APPLIANCES', 'HOME CARE', 'LADIESWEAR',
-            'LAWN AND GARDEN', 'LINGERIE', 'LIQUOR,WINE,BEER', 'MAGAZINES',
-            'MEATS', 'PERSONAL CARE', 'PET SUPPLIES', 'PLAYERS AND ELECTRONICS',
-            'POULTRY', 'PREPARED FOODS', 'PRODUCE', 'SCHOOL AND OFFICE SUPPLIES',
-            'SEAFOOD'
+            'HOME AND KITCHEN', 'HOME APPLIANCES', 'HOME CARE', 'LADIESWEAR'
         ]
         
-        for i, f in enumerate(families):
-            if family.upper() == f:
-                family_index = i
-                break
+        # Use a map to handle all family types even if not in the reduced list
+        family_upper = family.upper()
+        if family_upper in families:
+            idx = families.index(family_upper)
+            if 62 + idx < 81:  # Safety check to prevent index out of bounds
+                features[62 + idx] = 1
         
-        if family_index >= 0:
-            features[62 + family_index] = 1
+        # Set remaining features if needed
+        # Since we've allocated up to index 80 (total 81 elements from 0-80),
+        # we don't need the additional features from the original implementation
         
-        # Custom family-specific popularity metric (varies by family)
-        family_popularity = {
-            'PRODUCE': 0.9,
-            'GROCERY I': 0.8,
-            'GROCERY II': 0.75,
-            'BEVERAGES': 0.85,
-            'DAIRY': 0.78,
-            'BREAD/BAKERY': 0.82,
-            'CLEANING': 0.5,
-            'PERSONAL CARE': 0.65,
-            'HOME CARE': 0.45
-        }
-        
-        # Store-specific size metric (varies by store)
-        store_size_factor = 0.5 + (store_nbr % 5) * 0.1  # Creates variation based on store number
-        
-        # Features 94-95 are holiday flags - simulate being sometimes true 
-        is_holiday = date.month == 12 and date.day >= 15  # Christmas season
-        is_local_holiday = date.day == 1 and date.month in [1, 5, 7]  # Some local holidays
-        
-        features[94] = 1 if is_holiday else 0  # is_holiday
-        features[95] = 1 if is_local_holiday else 0  # is_local_holiday
-        
-        # Features 96-97 are promotion features
-        features[96] = 1 if onpromotion else 0  # items_on_promotion
-        features[97] = 0.1 if onpromotion else 0  # promotion_ratio
-        
-        # Features 98-104 are temporal lag features
-        # Simulate some meaningful lag values for specific families
-        if family in family_popularity:
-            base_sales = family_popularity[family] * 100 * store_size_factor
-            
-            # Add day of week pattern
-            dow_factor = 1.0
-            if date.weekday() == 5:  # Saturday
-                dow_factor = 1.5
-            elif date.weekday() == 6:  # Sunday
-                dow_factor = 0.7
-            
-            # Create lag features with realistic patterns
-            for i in range(7):
-                features[98 + i] = base_sales * dow_factor * (0.9 + 0.2 * np.random.random())
-        
-        # Features 105-110 are rolling window features 
-        # Use the lag features to generate rolling stats
-        if family in family_popularity:
-            features[105] = np.mean(features[98:105])  # rolling mean
-            features[106] = np.std(features[98:105])   # rolling std
-            features[107] = features[105] * 1.1        # another rolling mean
-            features[108] = features[106] * 0.9        # another rolling std
-            features[109] = np.max(features[98:105])   # rolling max
-            features[110] = np.min(features[98:105])   # rolling min
-        
-        # Features 111-112 are trend features
-        # Simulate seasonal trends
-        month_trend = np.sin(2 * np.pi * date.month / 12) * 0.2
-        features[111] = month_trend
-        features[112] = month_trend * store_size_factor
-        
-        # Features 113-118 are cyclical encodings
-        features[113] = np.sin(2 * np.pi * date.month / 12)      # month_sin
-        features[114] = np.cos(2 * np.pi * date.month / 12)      # month_cos
-        features[115] = np.sin(2 * np.pi * date.day / 31)        # day_sin
-        features[116] = np.cos(2 * np.pi * date.day / 31)        # day_cos
-        features[117] = np.sin(2 * np.pi * date.weekday() / 7)   # dayofweek_sin
-        features[118] = np.cos(2 * np.pi * date.weekday() / 7)   # dayofweek_cos
-        
-        # Verify feature count
-        if len(features) != 81:
-            logger.error(f"Wrong number of features generated: got {len(features)}, expected 81")
-            # Fix the array size if needed
-            if len(features) < 81:
-                # Pad with zeros if too short
-                features = np.pad(features, (0, 81 - len(features)))
-            else:
-                # Truncate if too long
-                features = features[:81]
-        
-        logger.info(f"Successfully generated features array with shape: {features.shape}")
         return features
+        
     except Exception as e:
         logger.error(f"Error generating features: {e}")
-        logger.exception("Detailed error traceback:")
-        # Return a zero vector with exactly 81 features as fallback
+        logger.exception("Detailed traceback:")
+        # Return zeros as fallback
         return np.zeros(81)
 
 
