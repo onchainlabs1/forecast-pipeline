@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Forecasting Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #ff007f;
+            --background-color: #111;
+            --card-background: #222;
+            --text-color: #fff;
+            --secondary-text: #aaa;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            padding: 1rem;
+            background-color: rgba(17, 17, 17, 0.95);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-dot {
+            color: var(--primary-color);
+            margin: 0 2px;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 1rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 0, 127, 0.4);
+        }
+        
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8rem 2rem 4rem;
+            text-align: center;
+            min-height: 70vh;
+        }
+        
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(90deg, #ff007f, #ff884d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--secondary-text);
+            max-width: 700px;
+            margin-bottom: 2rem;
+        }
+        
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin: 3rem 0;
+            width: 100%;
+            max-width: 1200px;
+        }
+        
+        .stat-card {
+            background-color: var(--card-background);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 200px;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #ff007f, #ff884d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            color: var(--secondary-text);
+        }
+        
+        .cta-container {
+            margin-top: 3rem;
+        }
+        
+        .btn-large {
+            padding: 1rem 2.5rem;
+            font-size: 1.2rem;
+            border-radius: 50px;
+        }
+        
+        .image-container {
+            margin-top: 4rem;
+            width: 100%;
+            max-width: 900px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .dashboard-preview {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .feature-section {
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        
+        .feature-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .feature-card {
+            background-color: var(--card-background);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 300px;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        
+        .feature-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-description {
+            color: var(--secondary-text);
+        }
+        
+        footer {
+            padding: 3rem 2rem;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.3);
+            margin-top: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 3rem;
+            }
+            
+            .stat-card {
+                width: 150px;
+                padding: 1.5rem;
+            }
+            
+            .feature-card {
+                width: 100%;
+                max-width: 400px;
+            }
+        }
+        
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .animate-delay-1 {
+            animation-delay: 0.2s;
+        }
+        
+        .animate-delay-2 {
+            animation-delay: 0.4s;
+        }
+        
+        .animate-delay-3 {
+            animation-delay: 0.6s;
+        }
+        
+        .cube {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(-20deg) rotateY(-30deg);
+            animation: rotate 10s infinite linear;
+            margin-bottom: 2rem;
+        }
+        
+        @keyframes rotate {
+            from {
+                transform: rotateX(-20deg) rotateY(0deg);
+            }
+            to {
+                transform: rotateX(-20deg) rotateY(360deg);
+            }
+        }
+        
+        .cube-face {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border: 2px solid rgba(255, 0, 127, 0.5);
+            opacity: 0.7;
+        }
+        
+        .cube-face-front {
+            transform: translateZ(60px);
+            background-color: rgba(255, 0, 127, 0.1);
+        }
+        
+        .cube-face-back {
+            transform: translateZ(-60px) rotateY(180deg);
+            background-color: rgba(255, 0, 127, 0.1);
+        }
+        
+        .cube-face-right {
+            transform: translateX(60px) rotateY(90deg);
+            background-color: rgba(255, 0, 127, 0.1);
+        }
+        
+        .cube-face-left {
+            transform: translateX(-60px) rotateY(-90deg);
+            background-color: rgba(255, 0, 127, 0.1);
+        }
+        
+        .cube-face-top {
+            transform: translateY(-60px) rotateX(90deg);
+            background-color: rgba(255, 0, 127, 0.1);
+        }
+        
+        .cube-face-bottom {
+            transform: translateY(60px) rotateX(-90deg);
+            background-color: rgba(255, 0, 127, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            Sales<span class="logo-dot">.</span>Forecast
+        </div>
+        <div class="header-right">
+            <a href="http://localhost:8501" class="btn btn-primary">Login Dashboard</a>
+        </div>
+    </header>
+    
+    <main>
+        <section class="hero">
+            <div class="cube">
+                <div class="cube-face cube-face-front"></div>
+                <div class="cube-face cube-face-back"></div>
+                <div class="cube-face cube-face-right"></div>
+                <div class="cube-face cube-face-left"></div>
+                <div class="cube-face cube-face-top"></div>
+                <div class="cube-face cube-face-bottom"></div>
+            </div>
+            
+            <h1 class="animate">
+                Turn Sales Data into 
+                <span class="gradient-text">Strategic Insights</span>
+            </h1>
+            
+            <p class="animate animate-delay-1">
+                Advanced machine learning models to predict sales across 54 stores and 34 product families. Achieve 80.2% forecast accuracy with our enterprise-grade dashboard.
+            </p>
+            
+            <div class="stats-container animate animate-delay-2">
+                <div class="stat-card">
+                    <div class="stat-value">54</div>
+                    <div class="stat-label">Stores</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">34</div>
+                    <div class="stat-label">Product Families</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">$55.92</div>
+                    <div class="stat-label">Avg Sales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">80.2%</div>
+                    <div class="stat-label">Forecast Accuracy</div>
+                </div>
+            </div>
+            
+            <div class="cta-container animate animate-delay-3">
+                <a href="http://localhost:8501" class="btn btn-primary btn-large">Access Dashboard</a>
+            </div>
+            
+            <div class="image-container animate animate-delay-3">
+                <img src="dashboard.png" alt="Dashboard Preview" class="dashboard-preview">
+            </div>
+        </section>
+        
+        <section class="feature-section">
+            <h2>Key Features</h2>
+            
+            <div class="features">
+                <div class="feature-card animate">
+                    <div class="feature-icon">📈</div>
+                    <h3 class="feature-title">Sales Predictions</h3>
+                    <p class="feature-description">Accurate forecasts for any store and product family combination with ML models.</p>
+                </div>
+                
+                <div class="feature-card animate animate-delay-1">
+                    <div class="feature-icon">🧩</div>
+                    <h3 class="feature-title">Feature Explanations</h3>
+                    <p class="feature-description">Understand what drives your sales with SHAP-based feature importance.</p>
+                </div>
+                
+                <div class="feature-card animate animate-delay-2">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title">Historical Analysis</h3>
+                    <p class="feature-description">View past sales trends and patterns to inform business decisions.</p>
+                </div>
+                
+                <div class="feature-card animate animate-delay-3">
+                    <div class="feature-icon">🔍</div>
+                    <h3 class="feature-title">Store Comparison</h3>
+                    <p class="feature-description">Compare performance across multiple stores to identify opportunities.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <p>&copy; 2025 Sales Forecasting Dashboard | A Data Science Project</p>
+    </footer>
+    
+    <script>
+        // Redirect to the Streamlit dashboard on button click
+        document.querySelectorAll('.btn-primary').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = 'http://localhost:8501';
+            });
+        });
+        
+        // Add animation when elements come into view
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = 1;
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, {
+            threshold: 0.1
+        });
+        
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.style.opacity = 0;
+            card.style.transform = 'translateY(20px)';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html> 

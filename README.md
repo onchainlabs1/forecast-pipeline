@@ -215,3 +215,33 @@ MIT
 ## 📧 Contact
 
 Your Name - your.email@example.com
+
+## Executando com Landing Page Atrativa
+
+Este projeto agora oferece uma landing page moderna e atrativa como porta de entrada para o dashboard de previsão de vendas. A landing page foi projetada com uma experiência de usuário semelhante a sites profissionais, incluindo animações, transições suaves e design moderno com tema escuro.
+
+### Funcionalidades da Landing Page
+
+- **Design Moderno**: Interface com tema escuro, gradientes suaves e animações
+- **Apresentação Visual**: Exibe as principais métricas (54 lojas, 34 famílias de produtos, etc.)
+- **Integração Perfeita**: Conecta-se automaticamente ao dashboard Streamlit
+- **Experiência Profissional**: Proporciona uma primeira impressão impactante
+
+### Como Executar
+
+Para iniciar o sistema completo com a landing page e o dashboard:
+
+```bash
+python run_with_landing.py
+```
+
+Este comando irá:
+1. Iniciar o servidor da landing page em `http://localhost:8000`
+2. Iniciar automaticamente o dashboard Streamlit em `http://localhost:8501`
+3. Abrir o navegador na landing page
+
+A landing page oferece botões de "Login Dashboard" e "Access Dashboard" que redirecionam para o Streamlit, onde toda a funcionalidade principal de análise está disponível.
+
+### Capturas de Tela
+
+A landing page exibe informações sobre o projeto, incluindo o número de lojas (54), famílias de produtos (34), vendas médias ($55.92) e precisão de previsão (80.2%).
