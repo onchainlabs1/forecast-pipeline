@@ -1,45 +1,171 @@
-# Store Sales Forecasting System
+# RetailPro AI: Sales Forecasting Platform
 
-This project implements a complete sales forecasting system for a retail chain, offering an interactive dashboard to visualize historical data, generate future forecasts, and analyze model performance metrics.
+<div align="center">
+  
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![MLflow](https://img.shields.io/badge/MLflow-2.21.2-blue)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.20.0-FF4B4B)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.95.0-009688)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-## Features
+</div>
 
-- **Interactive Dashboard**: User-friendly interface to explore sales data
-- **Sales Forecasting**: Predictions by store and product family
-- **Performance Analysis**: Transparent verification of forecast accuracy
-- **Model Insights**: Visualization of feature importance and explainability
-- **Monitoring**: Model drift detection and data quality alerts
+<p align="center">
+  <img src="reports/dashboard_screenshot.png" alt="RetailPro AI Dashboard" width="800"/>
+</p>
 
-## Performance Metrics
+## 🎯 Business Problem
 
-- **Forecast Accuracy**: 80.17% (calculated as 100 - MAPE)
-- **MAPE**: 19.83% (Mean Absolute Percentage Error)
-- **MAE**: 46.16 (Mean Absolute Error)
-- **RMSE**: 50.64 (Root Mean Square Error)
+Retail chains face significant challenges in inventory management, with both overstocking and understocking leading to substantial financial losses:
 
-## Project Structure
+- **Overstocking** ties up capital and leads to markdowns and waste
+- **Understocking** results in lost sales and reduced customer satisfaction
+- **Seasonal variations** complicate manual forecasting approaches
+- **Promotion planning** requires accurate sales predictions
+
+RetailPro AI addresses these challenges by providing precise, store-level forecasts across all product families, enabling retailers to optimize inventory levels, plan promotions effectively, and maximize profitability.
+
+## 💡 Solution
+
+Our platform delivers an end-to-end forecasting solution that:
+
+- **Predicts sales** with 80%+ accuracy for 54 stores across 34 product families
+- **Visualizes trends** through an intuitive dashboard with customizable filters
+- **Explains predictions** using explainable AI techniques to build trust
+- **Monitors performance** with real-time drift detection and model metrics
+- **Secures data** with robust JWT authentication and role-based access
+
+## 🔍 Key Features
+
+<table>
+  <tr>
+    <td width="33%">
+      <h3 align="center">📊 Interactive Dashboard</h3>
+      <p align="center">Real-time visualization of sales trends with powerful filtering and drill-down capabilities</p>
+    </td>
+    <td width="33%">
+      <h3 align="center">🔮 ML Predictions</h3>
+      <p align="center">Generate accurate forecasts using advanced machine learning models with proven accuracy</p>
+    </td>
+    <td width="33%">
+      <h3 align="center">📈 Performance Analysis</h3>
+      <p align="center">Track forecast accuracy and model drift with automated monitoring and alerts</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="33%">
+      <h3 align="center">🔍 Model Insights</h3>
+      <p align="center">Understand predictions with explainable AI and feature importance visualization</p>
+    </td>
+    <td width="33%">
+      <h3 align="center">🔒 Enterprise Security</h3>
+      <p align="center">JWT-based authentication with role-based access control and data encryption</p>
+    </td>
+    <td width="33%">
+      <h3 align="center">⚙️ MLOps Integration</h3>
+      <p align="center">Complete integration with MLflow for experiment tracking and model versioning</p>
+    </td>
+  </tr>
+</table>
+
+## 📊 Performance Metrics
+
+<div align="center">
+  
+| Metric | Value | Description |
+|--------|-------|-------------|
+| **Forecast Accuracy** | 80.17% | Overall accuracy of predictions |
+| **MAPE** | 19.83% | Mean Absolute Percentage Error |
+| **MAE** | 46.16 | Mean Absolute Error |
+| **RMSE** | 50.64 | Root Mean Square Error |
+
+</div>
+
+## 🛠️ Technical Architecture
+
+Our platform follows a modern microservices architecture with three main components:
+
+<p align="center">
+  <img src="reports/architecture_diagram.png" alt="System Architecture" width="700"/>
+</p>
+
+```
+┌───────────────────┐     ┌──────────────────┐     ┌────────────────┐
+│                   │     │                  │     │                │
+│ Streamlit         │─────▶ FastAPI          │─────▶ ML Models      │
+│ Dashboard         │     │ Backend          │     │ & Predictions  │
+│                   │     │                  │     │                │
+└───────────────────┘     └──────────────────┘     └────────────────┘
+                                   │                        │
+                                   ▼                        ▼
+                          ┌──────────────────┐     ┌────────────────┐
+                          │                  │     │                │
+                          │ Authentication   │     │ Feature        │
+                          │ & Security       │     │ Engineering    │
+                          │                  │     │                │
+                          └──────────────────┘     └────────────────┘
+                                                            │
+                                                            ▼
+                                                   ┌────────────────┐
+                                                   │                │
+                                                   │ Monitoring     │
+                                                   │ & Metrics      │
+                                                   │                │
+                                                   └────────────────┘
+```
+
+## 🧰 Tech Stack
+
+<div align="center">
+  
+### Frontend
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
+![Plotly](https://img.shields.io/badge/Plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)
+![Altair](https://img.shields.io/badge/Altair-00A4EF?style=for-the-badge&logoColor=white)
+
+### Backend
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logoColor=white)
+![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
+
+### ML & Data Science
+![Scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
+![XGBoost](https://img.shields.io/badge/XGBoost-38cc77?style=for-the-badge&logoColor=white)
+![SHAP](https://img.shields.io/badge/SHAP-00B7EB?style=for-the-badge&logoColor=white)
+
+### DevOps & Monitoring
+![MLflow](https://img.shields.io/badge/MLflow-0194E2?style=for-the-badge&logo=mlflow&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![DVC](https://img.shields.io/badge/DVC-945DD6?style=for-the-badge&logo=dvc&logoColor=white)
+
+</div>
+
+## 📂 Project Structure
 
 ```
 mlproject/
 ├── src/
-│   ├── api/              # REST API for serving predictions
-│   ├── dashboard/        # Streamlit interface
-│   ├── database/         # Database models and connection
-│   ├── features/         # Feature generation for the model
-│   ├── models/           # Machine learning models
-│   ├── security/         # Authentication and security
-│   └── utils/            # Utility functions
-├── models/               # Trained models
-├── tests/                # Automated tests
-├── run_dashboard.sh      # Script to run the dashboard
-└── run_app_with_db.sh    # Script to run API and database
+│   ├── api/              # FastAPI application for model serving
+│   ├── dashboard/        # Streamlit interface with visualizations
+│   ├── database/         # Database models and connection utilities
+│   ├── features/         # Feature engineering pipeline
+│   ├── models/           # ML model definition, training and evaluation
+│   ├── security/         # Authentication and authorization
+│   └── utils/            # Shared utility functions
+├── models/               # Serialized model artifacts
+├── tests/                # Automated test suite
+├── airflow/              # Airflow DAGs for scheduled tasks
+├── monitoring/           # Monitoring and alerting components
+├── docker-compose.yml    # Docker configuration
+└── requirements.txt      # Python dependencies
 ```
 
-## Installation
+## 🚀 Local Development Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/mlproject.git
+git clone https://github.com/yourusername/mlproject.git
 cd mlproject
 
 # Create virtual environment
@@ -48,37 +174,44 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-```
 
-## Running the System
+# Start MLflow tracking server
+mlflow ui --port 8888 --host 0.0.0.0
 
-1. Start the API:
-```bash
+# Run the API
 python -m src.api.main
-```
 
-2. In another terminal, start the dashboard:
-```bash
+# In another terminal, start the dashboard
 streamlit run src/dashboard/app.py
 ```
 
-3. Access the dashboard in your browser: http://localhost:8501
+## 🔐 Authentication
 
-## Demo Credentials
-
+The system uses JWT-based authentication with the following demo credentials:
 - **Username**: johndoe
 - **Password**: secret
 
-## Known Issues
+Or admin access:
+- **Username**: admin
+- **Password**: admin
 
-- Type checking error in `isinstance(date, datetime.date)` method
-- Feature count mismatch (expected 81, generated 119)
-- SHAP explainer error due to dimension mismatch
-- Error saving predictions to database (invalid 'date' parameter)
+## 📸 Screenshots
 
-## Next Steps
+<div align="center">
+  <p float="left">
+    <img src="reports/metrics_overview.png" width="400" />
+    <img src="reports/store_comparison.png" width="400" /> 
+  </p>
+  <p float="left">
+    <img src="reports/model_explanations.png" width="400" />
+    <img src="reports/mlflow_tracking.png" width="400" />
+  </p>
+</div>
 
-- Fix type checking bugs
-- Resolve feature count incompatibility
-- Improve model explainability
-- Implement more automated tests
+## 📄 License
+
+MIT
+
+## 📧 Contact
+
+Your Name - your.email@example.com

@@ -35,9 +35,9 @@ from plotly.subplots import make_subplots
 project_root = Path(__file__).parents[2]
 sys.path.insert(0, str(project_root))
 
-# Define constants
-API_URL = os.getenv("API_URL", "http://localhost:8000")
-MLFLOW_URL = os.getenv("MLFLOW_URL", "http://localhost:5000")
+# Define constants - hardcode to localhost
+API_URL = "http://localhost:8000"  # Force to use local API
+MLFLOW_URL = "http://localhost:8888"  # Updated from 5000 to 8888
 
 # Configure page with dark theme
 st.set_page_config(
@@ -47,13 +47,102 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Adicionando estilo personalizado para o banner de login
+st.markdown("""
+<style>
+.login-banner {
+    background: linear-gradient(90deg, rgba(15, 17, 23, 0.95) 0%, rgba(15, 17, 23, 0.8) 100%);
+    color: white;
+    padding: 20px 25px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(79, 209, 197, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.login-banner-icon {
+    margin-right: 10px;
+    font-size: 20px;
+    color: #4fd1c5;
+}
+
+.login-banner-text {
+    flex-grow: 1;
+}
+
+.login-banner-button {
+    background-color: #4fd1c5;
+    color: #0e1117;
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    margin-left: 15px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.login-banner-button:hover {
+    background-color: #3bb3a9;
+    box-shadow: 0 2px 8px rgba(79, 209, 197, 0.5);
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Adicionar o estilo personalizado para o banner superior
+st.markdown("""
+<style>
+.custom-top-banner {
+    background: linear-gradient(90deg, rgba(255, 209, 102, 0.15) 0%, rgba(255, 209, 102, 0.2) 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border-left: 4px solid #FFD166;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.banner-icon {
+    color: #FFD166;
+    font-size: 24px;
+    margin-right: 10px;
+}
+
+.banner-text {
+    color: #fafafa;
+    font-size: 16px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Para debug - se a sessão existe mas está vazia
+if "token" not in st.session_state:
+    st.session_state.token = None
+    st.session_state.token_type = None
+    st.session_state.user_info = None
+
+# Inicializar estado para controle de autenticação
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
 # Force dark mode
 st.markdown("""
 <style>
 :root {
     --background-color: #0e1117;
     --secondary-background-color: #262730;
-    --primary-color: #ff4b4b;
+    --primary-color: #4fd1c5;
+    --secondary-color: #FF4B4B;
+    --accent-color: #FFD166;
+    --success-color: #06D6A0;
     --text-color: #fafafa;
     color-scheme: dark;
 }
@@ -68,27 +157,148 @@ st.markdown("""
     background-color: #262730 !important;
 }
 
-.stTextInput input, .stNumberInput input, .stDateInput input {
-    background-color: #262730 !important;
+/* Melhorar o estilo do banner de alerta no topo */
+[data-baseweb="notification"] {
+    background-color: rgba(255, 209, 102, 0.15) !important;
+    border-color: #FFD166 !important;
     color: #fafafa !important;
 }
 
-.stSelectbox select, .stMultiSelect select {
+[data-baseweb="notification"] [data-testid="stMarkdownContainer"] p {
+    color: #fafafa !important;
+}
+
+.stAlert {
+    background-color: rgba(255, 209, 102, 0.15) !important;
+    color: #fafafa !important;
+    border-radius: 8px !important;
+    border-left: 3px solid #FFD166 !important;
+}
+
+/* Corrigir o banner amarelo */
+div[data-testid="stNotification"] {
+    background-color: rgba(255, 209, 102, 0.15) !important;
+    border-color: #FFD166 !important;
+    color: #fafafa !important;
+}
+
+.stTextInput input, .stNumberInput input, .stDateInput input {
     background-color: #262730 !important;
     color: #fafafa !important;
+    border: 1px solid #4f4f4f !important;
+}
+
+.stSelectbox select, .stMultiSelect select, .stDateInput, .stTimeInput {
+    background-color: #262730 !important;
+    color: #fafafa !important;
+    border: 1px solid #4f4f4f !important;
+}
+
+/* Make buttons more stylish */
+.stButton button {
+    background-color: #4fd1c5 !important;
+    color: #0e1117 !important;
+    font-weight: bold !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 0.5rem 1rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.stButton button:hover {
+    background-color: #3bb3a9 !important;
+    box-shadow: 0 0 10px rgba(79, 209, 197, 0.5) !important;
+}
+
+/* Tab styling */
+.stTabs [data-baseweb="tab-list"] {
+    background-color: #1E1E1E !important;
+    border-radius: 8px !important;
+    padding: 5px !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    color: #fafafa !important;
+    border-radius: 4px !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: #262730 !important;
+    border-bottom: 2px solid #4fd1c5 !important;
+}
+
+/* Form styling */
+[data-testid="stForm"] {
+    background-color: #262730 !important;
+    padding: 20px !important;
+    border-radius: 10px !important;
+    border: 1px solid #383838 !important;
 }
 
 /* Make metric values more visible in dark mode */
 [data-testid="stMetricValue"] {
-    color: #fafafa !important;
+    color: #4fd1c5 !important;
     font-weight: bold !important;
     font-size: 1.5rem !important;
+}
+
+[data-testid="stMetricLabel"] {
+    color: #cccccc !important;
 }
 
 /* Make warning messages more visible */
 .stAlert {
     background-color: #473a11 !important;
     color: #fbcf61 !important;
+    border-radius: 8px !important;
+}
+
+/* Success messages */
+.element-container div[data-testid="stAlert"][data-baseweb="notification"] {
+    background-color: #0f3d33 !important;
+    color: #06D6A0 !important;
+    border-radius: 8px !important;
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: #1a1a1a !important;
+    border-right: 1px solid #333333 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
+    color: #4fd1c5 !important;
+}
+
+/* Dataframe styling */
+[data-testid="stDataFrame"] {
+    background-color: #1E1E1E !important;
+}
+
+[data-testid="stDataFrame"] td, 
+[data-testid="stDataFrame"] th {
+    color: #fafafa !important;
+    background-color: #262730 !important;
+    border-bottom: 1px solid #333333 !important;
+}
+
+/* Card-like sections for all containers */
+.css-1r6slb0 > div:first-child, .block-container, [data-testid="stExpander"] {
+    background-color: #1E1E1E !important;
+    border-radius: 10px !important;
+    border: 1px solid #333333 !important;
+    padding: 10px !important;
+}
+
+/* Header styling */
+h1, h2, h3 {
+    color: #4fd1c5 !important;
+}
+
+h4, h5, h6 {
+    color: #FFD166 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -99,22 +309,35 @@ def login(username, password):
     Login to the API and get a JWT token.
     """
     try:
+        # Debug log
+        print(f"Attempting login with {username} to API at {API_URL}/token")
+        
+        # Use the /token endpoint with form data as expected by OAuth2
         response = requests.post(
             f"{API_URL}/token",
             data={
                 "username": username,
-                "password": password,
-                "scope": "predictions:read"
+                "password": password
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         
+        # Detailed response log
+        print(f"Login status code: {response.status_code}")
+        print(f"Login response headers: {response.headers}")
+        print(f"Login response (first 100 chars): {response.text[:100] if response.text else ''}")
+        
         if response.status_code == 200:
-            return response.json()
+            token_data = response.json()
+            print(f"Login successful! Token received (first 20 chars): {token_data.get('access_token', '')[:20]}")
+            st.session_state.authenticated = True
+            return token_data
         else:
-            st.error(f"Login failed: {response.json().get('detail', 'Unknown error')}")
+            print(f"Login failed: {response.text}")
+            st.error(f"Login failed: {response.text}")
             return None
     except Exception as e:
+        print(f"Error connecting to API: {str(e)}")
         st.error(f"Error connecting to API: {str(e)}")
         return None
 
@@ -126,8 +349,34 @@ def decode_token(token):
         # This is just for display, no verification needed
         return jwt.decode(token, options={"verify_signature": False})
     except Exception as e:
+        print(f"Erro decodificando token: {str(e)}")
         st.error(f"Error decoding token: {str(e)}")
         return {}
+
+# Helper function to check authentication
+def ensure_authenticated():
+    """Verifies if the token is present and still valid."""
+    if not st.session_state.token:
+        return False
+        
+    # Verify token is working by making a test request
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        response = requests.get(f"{API_URL}/users/me", headers=headers)
+        if response.status_code == 200:
+            print("Token verified and valid")
+            return True
+        else:
+            print(f"Invalid token, status: {response.status_code}, response: {response.text[:100]}")
+            # If token expired, clear authentication state
+            if response.status_code == 401:
+                st.session_state.token = None
+                st.session_state.token_type = None
+                st.session_state.authenticated = False
+            return False
+    except Exception as e:
+        print(f"Error verifying token: {str(e)}")
+        return False
 
 # API interaction functions
 def get_prediction(token, store_nbr, family, onpromotion, date):
@@ -326,14 +575,32 @@ def get_metric_summary(token):
     Get sales metrics summary from the API.
     """
     try:
+        # Detailed debug log
+        print(f"Calling metrics_summary with token: {token[:20] if token else 'None'}")
+        
+        # Ensure we don't send a null token
+        if not token:
+            print("ERROR: Attempting to call metrics_summary without token")
+            return None
+            
+        # Correct formatting of authentication header
         headers = {"Authorization": f"Bearer {token}"}
+        print(f"Headers: {headers}")
+        
+        # Make the request
         response = requests.get(
             f"{API_URL}/metrics_summary",
             headers=headers
         )
         
+        # Detailed response log
+        print(f"Status code: {response.status_code}")
+        if response.status_code != 200:
+            print(f"Error response: {response.text[:200]}") 
+        
         if response.status_code == 200:
             data = response.json()
+            print(f"Data received successfully: {str(data)[:100]}...")
             
             # Check if data is mock and show warning
             if data.get("is_mock_data", False):
@@ -341,10 +608,17 @@ def get_metric_summary(token):
                 st.warning(message, icon="⚠️")
                 
             return data
+        elif response.status_code == 401:
+            # If unauthorized, try to renew token
+            print("Invalid or expired token. Logging out for reauthentication.")
+            # Indicate to user they need to log in again
+            st.error("Your session has expired. Please login again.")
+            return None
         else:
             st.error(f"Failed to fetch metrics: {response.status_code} - {response.text}")
             return None
     except Exception as e:
+        print(f"Error fetching metrics: {str(e)}")
         st.error(f"Error fetching metrics: {str(e)}")
         return None
 
@@ -355,76 +629,153 @@ def render_sidebar():
     """
     st.sidebar.title("Navigation")
     
+    # DEBUG TOKEN STATE - debug mode only
+    debug_mode = False
+    if debug_mode:
+        st.sidebar.subheader("Token Status")
+        if st.session_state.get("token"):
+            st.sidebar.success("✅ Token present")
+            token_str = st.session_state.token
+            if len(token_str) > 50:
+                token_str = f"{token_str[:25]}...{token_str[-25:]}"
+            st.sidebar.code(token_str, language="text")
+        else:
+            st.sidebar.error("❌ Token missing")
+    
     # Check for authentication
-    if "token" not in st.session_state:
-        st.sidebar.subheader("Login")
-        with st.sidebar.form("login_form"):
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Login")
+    if not st.session_state.get("token") or not st.session_state.authenticated:
+        # Enhanced login section
+        st.sidebar.markdown("""
+        <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; border-left: 3px solid #4fd1c5;">
+            <h3 style="color: #4fd1c5; margin-top: 0;">Login</h3>
+            <p style="font-size: 0.9em; opacity: 0.8;">Please enter your credentials to access the dashboard.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        with st.sidebar.form("login_form", clear_on_submit=False):
+            # Styled username field
+            st.markdown('<p style="margin-bottom: 5px; font-weight: bold; color: #cccccc;">Username</p>', unsafe_allow_html=True)
+            username = st.text_input("", placeholder="Enter username", key="username_input", label_visibility="collapsed")
+            
+            # Styled password field
+            st.markdown('<p style="margin-bottom: 5px; font-weight: bold; color: #cccccc;">Password</p>', unsafe_allow_html=True)
+            password = st.text_input("", type="password", placeholder="Enter password", key="password_input", label_visibility="collapsed")
+            
+            # Add some space
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # Styled login button
+            submit = st.form_submit_button("Sign In", use_container_width=True)
             
             if submit:
                 if username and password:
-                    auth_response = login(username, password)
-                    if auth_response:
-                        st.session_state.token = auth_response["access_token"]
-                        st.session_state.token_type = auth_response["token_type"]
-                        st.session_state.user_info = decode_token(auth_response["access_token"])
-                        st.success("Login successful!")
-                        st.rerun()
+                    # Log before attempting login
+                    print(f"Attempting login with user: {username}")
+                    
+                    with st.spinner("Authenticating..."):
+                        auth_response = login(username, password)
+                        if auth_response:
+                            # Log before saving token
+                            print(f"Login successful. Saving token...")
+                            
+                            st.session_state.token = auth_response["access_token"]
+                            st.session_state.token_type = auth_response["token_type"]
+                            st.session_state.user_info = decode_token(auth_response["access_token"])
+                            st.session_state.authenticated = True
+                            
+                            # Log after saving token
+                            print(f"Token saved: {st.session_state.token[:20]}...")
+                            
+                            st.success("Login successful!")
+                            st.rerun()
+                        else:
+                            st.error("Login failed. Please check your credentials.")
                 else:
                     st.error("Please enter both username and password.")
         
-        # Demo credentials
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("Demo Credentials")
-        st.sidebar.markdown("Username: johndoe")
-        st.sidebar.markdown("Password: secret")
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("Username: admin")
-        st.sidebar.markdown("Password: admin")
+        # Demo credentials with improved styling
+        st.sidebar.markdown("""
+        <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #FFD166;">
+            <h4 style="color: #FFD166; margin-top: 0;">Demo Credentials</h4>
+            <p style="font-size: 0.9em; margin-bottom: 5px;"><span style="color: #FFD166; font-weight: bold;">Username:</span> johndoe</p>
+            <p style="font-size: 0.9em; margin-bottom: 0;"><span style="color: #FFD166; font-weight: bold;">Password:</span> secret</p>
+            <hr style="border-color: #333333; margin: 10px 0;">
+            <p style="font-size: 0.9em; margin-bottom: 5px;"><span style="color: #FFD166; font-weight: bold;">Username:</span> admin</p>
+            <p style="font-size: 0.9em; margin-bottom: 0;"><span style="color: #FFD166; font-weight: bold;">Password:</span> admin</p>
+        </div>
+        """, unsafe_allow_html=True)
         
     else:
-        # User info
-        st.sidebar.subheader("User Info")
+        # Verify token - if expired, force logout
+        is_valid = ensure_authenticated()
+        if not is_valid:
+            print("Invalid token detected. Forcing logout...")
+            st.sidebar.error("Your session has expired. Please login again.")
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
+            
+        # User info with better styling
+        st.sidebar.markdown("""
+        <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 3px solid #06D6A0;">
+            <h4 style="color: #06D6A0; margin-top: 0;">User Profile</h4>
+        """, unsafe_allow_html=True)
+        
         user_info = st.session_state.user_info
         st.sidebar.markdown(f"**Username:** {user_info.get('sub', 'Unknown')}")
+        
         scopes = user_info.get("scopes", [])
         if scopes:
             st.sidebar.markdown("**Permissions:**")
             for scope in scopes:
                 st.sidebar.markdown(f"- {scope}")
+                
+        st.sidebar.markdown("</div>", unsafe_allow_html=True)
         
-        # Page navigation
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("Pages")
+        # Page navigation with improved styling
+        st.sidebar.markdown("""
+        <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 3px solid #4fd1c5;">
+            <h4 style="color: #4fd1c5; margin-top: 0;">Navigation</h4>
+        </div>
+        """, unsafe_allow_html=True)
+        
         page = st.sidebar.radio(
             "Select Page",
-            ["Dashboard", "Predictions", "Model Insights", "Settings"]
+            ["Dashboard", "Predictions", "Model Insights", "Settings"],
+            key="page_selector"
         )
         st.session_state.page = page
         
-        # Logout
-        st.sidebar.markdown("---")
-        if st.sidebar.button("Logout"):
+        # Logout button with improved styling
+        st.sidebar.markdown("<br>", unsafe_allow_html=True)
+        if st.sidebar.button("Logout", key="logout_button", use_container_width=True):
+            print("Logout requested by user. Clearing session state...")
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
     
-    # API Status
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("API Status")
+    # API Status with improved styling
+    st.sidebar.markdown("""
+    <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #FFD166;">
+        <h4 style="color: #FFD166; margin-top: 0;">System Status</h4>
+    """, unsafe_allow_html=True)
+    
     health = get_health()
     if health["status"] == "healthy":
-        st.sidebar.success("API is healthy")
+        st.sidebar.success("✅ API is online and healthy")
     else:
-        st.sidebar.error(f"API is not available: {health.get('message', 'Unknown error')}")
+        st.sidebar.error(f"❌ API is not available: {health.get('message', 'Unknown error')}")
+        
+    st.sidebar.markdown("</div>", unsafe_allow_html=True)
     
-    # Links
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Resources")
-    st.sidebar.markdown("[MLflow Dashboard](%s)" % MLFLOW_URL)
-    st.sidebar.markdown("[API Documentation](%s/docs)" % API_URL)
+    # Links with improved styling
+    st.sidebar.markdown("""
+    <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #FF4B4B;">
+        <h4 style="color: #FF4B4B; margin-top: 0;">Resources</h4>
+        <p style="margin-bottom: 5px;"><a href="%s" style="color: #4fd1c5; text-decoration: none;">📊 MLflow Dashboard</a></p>
+        <p style="margin-bottom: 0;"><a href="%s/docs" style="color: #4fd1c5; text-decoration: none;">📚 API Documentation</a></p>
+    </div>
+    """ % (MLFLOW_URL, API_URL), unsafe_allow_html=True)
 
 def display_sales_history(store_nbr, family, days):
     try:
@@ -572,40 +923,87 @@ def display_sales_history(store_nbr, family, days):
 def display_dashboard():
     st.header("Store Sales Forecast Dashboard")
     
+    # Verify authentication before trying to load metrics
+    if not st.session_state.get("token") or not st.session_state.authenticated:
+        st.warning("Please login to view the complete dashboard.")
+        return
+    
     # Display KPIs
     col1, col2, col3, col4 = st.columns(4)
     
     try:
         # Get metrics from API
-        metrics = get_metric_summary(st.session_state.token)
+        print("Loading metrics from dashboard...")
         
-        with col1:
-            st.metric("Total Stores", str(metrics.get("total_stores", "N/A")))
+        # Create proper authorization header with token
+        auth_token = st.session_state.token
+        headers = {
+            "Authorization": f"Bearer {auth_token}"
+        }
+        print(f"Using auth header: {headers}")
+        
+        # Make direct API call - avoid using get_metric_summary helper for now
+        api_response = requests.get(f"{API_URL}/metrics_summary", headers=headers)
+        
+        # Log response for debugging
+        print(f"API response status: {api_response.status_code}")
+        print(f"API response: {api_response.text[:200]}")
+        
+        if api_response.status_code == 200:
+            metrics = api_response.json()
             
-        with col2:
-            total_families = metrics.get("total_families", "N/A")
-            if isinstance(total_families, (int, float)):
-                total_families_str = f"{total_families} families"
-            else:
-                total_families_str = "N/A"
-            st.metric("Total Products", total_families_str)
-            
-        with col3:
-            avg_sales = metrics.get("avg_sales", 0)
-            if isinstance(avg_sales, (int, float)):
-                formatted_avg = f"${avg_sales:.2f}"
-            else:
-                formatted_avg = "N/A"
-            st.metric("Average Sales", formatted_avg)
-            
-        with col4:
-            accuracy = metrics.get("forecast_accuracy", 0)
-            if isinstance(accuracy, (int, float)):
-                accuracy_str = f"{accuracy:.1f}%"
-            else:
-                accuracy_str = "N/A"
-            st.metric("Forecast Accuracy", accuracy_str)
+            with col1:
+                st.metric("Total Stores", str(metrics.get("total_stores", "N/A")))
+                
+            with col2:
+                total_families = metrics.get("total_families", "N/A")
+                if isinstance(total_families, (int, float)):
+                    total_families_str = f"{total_families} families"
+                else:
+                    total_families_str = "N/A"
+                st.metric("Total Products", total_families_str)
+                
+            with col3:
+                avg_sales = metrics.get("avg_sales", 0)
+                if isinstance(avg_sales, (int, float)):
+                    formatted_avg = f"${avg_sales:.2f}"
+                else:
+                    formatted_avg = "N/A"
+                st.metric("Average Sales", formatted_avg)
+                
+            with col4:
+                accuracy = metrics.get("forecast_accuracy", 0)
+                if isinstance(accuracy, (int, float)):
+                    accuracy_str = f"{accuracy:.1f}%"
+                else:
+                    accuracy_str = "N/A"
+                st.metric("Forecast Accuracy", accuracy_str)
+        elif api_response.status_code == 401:
+            # Authentication error - clear session and show error
+            st.error("Authentication failed. Please login again.")
+            print("Authentication error from API. Token may be invalid.")
+            # Use fallback values
+            with col1:
+                st.metric("Total Stores", "N/A")
+            with col2:
+                st.metric("Total Products", "N/A")
+            with col3:
+                st.metric("Average Sales", "N/A")
+            with col4:
+                st.metric("Forecast Accuracy", "N/A")
+        else:
+            # Problems with token or API - show default values
+            print(f"Error loading metrics - API returned {api_response.status_code}")
+            with col1:
+                st.metric("Total Stores", "N/A")
+            with col2:
+                st.metric("Total Products", "N/A")
+            with col3:
+                st.metric("Average Sales", "N/A")
+            with col4:
+                st.metric("Forecast Accuracy", "N/A")
     except Exception as e:
+        print(f"Error loading metrics: {str(e)}")
         st.error(f"Error loading metrics: {str(e)}")
         # Use fallback values if API call fails
         with col1:
@@ -738,9 +1136,79 @@ def render_predictions():
     """
     st.title("Sales Predictions")
     
+    # Adicionar CSS para esta página específica
     st.markdown("""
-    Use this page to get sales predictions for specific stores, product families, and dates.
-    """)
+    <style>
+    .prediction-card {
+        background-color: #1E1E1E;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 3px solid #4fd1c5;
+        transition: all 0.3s ease;
+    }
+    
+    .prediction-card:hover {
+        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        transform: translateY(-2px);
+    }
+    
+    .prediction-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #333;
+        padding-bottom: 10px;
+    }
+    
+    .prediction-results {
+        background-color: #262730;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+        border-left: 3px solid #FFD166;
+    }
+    
+    .real-prediction {
+        background-color: rgba(6, 214, 160, 0.1);
+        border: 1px solid rgba(6, 214, 160, 0.3);
+        border-radius: 8px;
+        padding: 15px;
+    }
+    
+    .form-container {
+        background-color: #262730;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .animated-bg {
+        background: linear-gradient(270deg, #1E1E1E, #262730);
+        background-size: 400% 400%;
+        animation: gradient 8s ease infinite;
+    }
+    
+    @keyframes gradient {
+        0% {background-position: 0% 50%}
+        50% {background-position: 100% 50%}
+        100% {background-position: 0% 50%}
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Descrição mais atraente
+    st.markdown("""
+    <div class="prediction-card animated-bg">
+        <div class="prediction-header">
+            <h3 style="color: #4fd1c5; margin: 0; flex-grow: 1;">Advanced Sales Forecasting</h3>
+            <span style="background-color: rgba(79, 209, 197, 0.2); color: #4fd1c5; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">ML POWERED</span>
+        </div>
+        <p>Use our state-of-the-art machine learning models to predict future sales for specific stores and product families. Our models achieve over 80% accuracy and can help optimize inventory management and marketing strategies.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Check API health before allowing predictions
     health = get_health()
@@ -766,10 +1234,16 @@ def render_predictions():
         families = ["PRODUCE", "GROCERY I", "DAIRY", "BEVERAGES", "BREAD/BAKERY"]
     
     # Show advanced options
-    with st.expander("Prediction Options"):
-        enable_debug = st.checkbox("Show Debug Information", value=True)
+    with st.expander("Advanced Options"):
+        enable_debug = st.checkbox("Show Debug Information", value=False)
     
-    # Form for predictions
+    # Form for predictions within card
+    st.markdown("""
+    <div class="form-container">
+        <h4 style="color: #FFD166; margin-top: 0; margin-bottom: 15px;">Prediction Parameters</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    
     with st.form("prediction_form"):
         col1, col2, col3 = st.columns(3)
         
@@ -802,12 +1276,12 @@ def render_predictions():
         
         date = st.date_input("Prediction Date", datetime.now().date() + timedelta(days=1))
         
-        submitted = st.form_submit_button("Get Prediction")
+        submitted = st.form_submit_button("Generate Prediction")
     
     # Process form submission
     if submitted:
         if "token" in st.session_state:
-            with st.spinner("Getting prediction..."):
+            with st.spinner("Generating prediction..."):
                 # Extract store number from string (if needed)
                 store_val = 1  # Default value
                 
@@ -833,58 +1307,83 @@ def render_predictions():
                 )
                 
                 if prediction:
-                    # Show prediction results
-                    st.success("Prediction request successful!")
-                    
+                    # Show prediction results in visually appealing card
                     # Check if this is a fallback prediction
                     is_fallback = prediction.get('is_fallback', False)
                     saved_to_db = prediction.get('saved_to_db', False)
                     
                     # Format prediction
-                    st.subheader("Prediction Results")
+                    st.markdown("""
+                    <div class="prediction-card">
+                        <div class="prediction-header">
+                            <h3 style="color: #4fd1c5; margin: 0; flex-grow: 1;">Prediction Results</h3>
+                        </div>
+                    """, unsafe_allow_html=True)
                     
-                    col1, col2 = st.columns(2)
+                    # Parâmetros
+                    st.markdown(f"""
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: inline-block; background-color: #1a1a1a; padding: 5px 10px; border-radius: 4px; margin-right: 10px; margin-bottom: 10px;">
+                            <span style="color: #888; font-size: 0.75em;">STORE</span><br>
+                            <span style="color: #fff;">{store_nbr}</span>
+                        </div>
+                        <div style="display: inline-block; background-color: #1a1a1a; padding: 5px 10px; border-radius: 4px; margin-right: 10px; margin-bottom: 10px;">
+                            <span style="color: #888; font-size: 0.75em;">PRODUCT</span><br>
+                            <span style="color: #fff;">{family}</span>
+                        </div>
+                        <div style="display: inline-block; background-color: #1a1a1a; padding: 5px 10px; border-radius: 4px; margin-right: 10px; margin-bottom: 10px;">
+                            <span style="color: #888; font-size: 0.75em;">DATE</span><br>
+                            <span style="color: #fff;">{date.strftime("%Y-%m-%d")}</span>
+                        </div>
+                        <div style="display: inline-block; background-color: #1a1a1a; padding: 5px 10px; border-radius: 4px; margin-bottom: 10px;">
+                            <span style="color: #888; font-size: 0.75em;">PROMOTION</span><br>
+                            <span style="color: #fff;">{"Yes" if onpromotion else "No"}</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                    with col1:
-                        # Verifica qual chave está disponível
-                        prediction_value = None
-                        if 'prediction' in prediction:
-                            prediction_value = prediction['prediction']
-                        elif 'predicted_sales' in prediction:
-                            prediction_value = prediction['predicted_sales']
-                        else:
-                            st.error("Prediction data format is invalid. Missing prediction value.")
-                            prediction_value = 0
-                            
-                        # Estiliza de forma diferente caso seja fallback
-                        if is_fallback:
-                            message = prediction.get('message', 'WARNING: Using simulated prediction (fallback)')
-                            st.warning(message, icon="⚠️")
-                            
-                            st.markdown(f"""
-                            <div style="padding: 10px; background-color: #fff3cd; border-radius: 5px; border: 1px solid #ffeeba;">
-                                <h3 style="color: #856404; margin: 0;">Predicted Sales (SIMULATED)</h3>
-                                <p style="font-size: 24px; font-weight: bold; margin: 0; color: #856404;">${prediction_value:.2f}</p>
+                    # Prediction result
+                    prediction_value = None
+                    if 'prediction' in prediction:
+                        prediction_value = prediction['prediction']
+                    elif 'predicted_sales' in prediction:
+                        prediction_value = prediction['predicted_sales']
+                    else:
+                        st.error("Prediction data format is invalid. Missing prediction value.")
+                        prediction_value = 0
+                    
+                    if is_fallback:
+                        message = prediction.get('message', 'WARNING: Using simulated prediction (fallback)')
+                        st.warning(message, icon="⚠️")
+                        
+                        st.markdown(f"""
+                        <div style="background-color: rgba(255, 209, 102, 0.1); border: 1px solid rgba(255, 209, 102, 0.3); border-radius: 8px; padding: 15px; text-align: center;">
+                            <h3 style="color: #FFD166; margin: 0 0 5px 0;">Predicted Sales (SIMULATED)</h3>
+                            <p style="font-size: 32px; font-weight: bold; margin: 0; color: #FFD166;">${prediction_value:.2f}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Show error details if debug is enabled
+                        if enable_debug and 'error' in prediction:
+                            st.error(f"Model Error: {prediction['error']}")
+                    else:
+                        st.markdown(f"""
+                        <div class="real-prediction" style="text-align: center;">
+                            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                                <h3 style="color: #06D6A0; margin: 0;">Predicted Sales</h3>
+                                <span style="background-color: rgba(6, 214, 160, 0.2); color: #06D6A0; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px;">REAL MODEL</span>
                             </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Show error details if debug is enabled
-                            if enable_debug and 'error' in prediction:
-                                st.error(f"Model Error: {prediction['error']}")
-                        else:
-                            st.success("REAL MODEL PREDICTION", icon="✅")
-                            st.metric(
-                                "Predicted Sales (REAL)", 
-                                f"${prediction_value:.2f}",
-                                delta=None
-                            )
-                            
-                            # Show if prediction was saved to database
-                            if enable_debug:
-                                if saved_to_db:
-                                    st.success("✅ Prediction saved to database")
-                                else:
-                                    st.warning("⚠️ Prediction not saved to database")
+                            <p style="font-size: 42px; font-weight: bold; margin: 10px 0; color: #06D6A0;">${prediction_value:.2f}</p>
+                            <p style="font-size: 14px; margin: 0; opacity: 0.7;">Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Show if prediction was saved to database
+                        if enable_debug:
+                            if saved_to_db:
+                                st.success("✅ Prediction saved to database")
+                            else:
+                                st.warning("⚠️ Prediction not saved to database")
                     
                     # Show raw prediction data in debug mode
                     if enable_debug:
@@ -907,7 +1406,11 @@ def render_predictions():
                             )
                             
                             if explanation:
-                                st.subheader("Prediction Explanation")
+                                st.markdown("""
+                                <div class="prediction-header" style="margin-top: 30px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                                    <h3 style="color: #4fd1c5; margin: 0; flex-grow: 1;">Prediction Explanation</h3>
+                                </div>
+                                """, unsafe_allow_html=True)
                                 
                                 # Check for explanation message that might indicate it's a fallback
                                 exp_message = explanation.get("message", "")
@@ -940,10 +1443,33 @@ def render_predictions():
                                     fig.update_layout(
                                         title="Feature Contributions to Prediction",
                                         showlegend=False,
+                                        template="plotly_dark",
                                         height=500
                                     )
                                     
                                     st.plotly_chart(fig, use_container_width=True)
+                                    
+                                    # Adicionar explicação sobre as features principais
+                                    top_features = feat_df.head(3)
+                                    if not top_features.empty:
+                                        st.markdown("""
+                                        <div style="background-color: #262730; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                                            <h4 style="color: #FFD166; margin-top: 0;">Key Factors Influencing This Prediction</h4>
+                                        """, unsafe_allow_html=True)
+                                        
+                                        for _, row in top_features.iterrows():
+                                            direction = "increased" if row['contribution'] > 0 else "decreased"
+                                            magnitude = abs(row['contribution'])
+                                            color = "#06D6A0" if row['contribution'] > 0 else "#FF4B4B"
+                                            
+                                            st.markdown(f"""
+                                            <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333;">
+                                                <span style="color: {color}; font-weight: bold;">{row['feature']}</span>: 
+                                                <span>Value of <strong>{row['value']:.2f}</strong> {direction} the prediction by <strong>${magnitude:.2f}</strong></span>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                        
+                                        st.markdown("</div>", unsafe_allow_html=True)
                                 else:
                                     st.warning("Explanation available but no feature contributions found.")
                                     
@@ -956,283 +1482,485 @@ def render_predictions():
                         except Exception as exp_error:
                             st.error(f"Error generating explanation: {str(exp_error)}")
                             st.warning("Unable to generate explanation for this prediction. Model may not support explainability.")
+                            
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    
+                    # Sugestões de ação com base na previsão
+                    if prediction_value is not None:
+                        st.markdown("""
+                        <div class="prediction-card" style="border-left: 3px solid #FFD166;">
+                            <div class="prediction-header">
+                                <h3 style="color: #FFD166; margin: 0; flex-grow: 1;">Recommended Actions</h3>
+                            </div>
+                            
+                            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px;">
+                        """, unsafe_allow_html=True)
+                        
+                        # Determinar recomendações com base no valor da previsão
+                        is_high_value = prediction_value > 50
+                        is_promotion = onpromotion
+                        
+                        if is_high_value and not is_promotion:
+                            st.markdown("""
+                            <div style="flex: 1; min-width: 200px; background-color: rgba(6, 214, 160, 0.1); border-radius: 8px; padding: 15px; border: 1px solid rgba(6, 214, 160, 0.3);">
+                                <h4 style="color: #06D6A0; margin-top: 0;">Consider Promotion</h4>
+                                <p style="margin-bottom: 0;">High predicted sales volume indicates strong demand. Consider running a promotion to maximize revenue.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        elif is_high_value and is_promotion:
+                            st.markdown("""
+                            <div style="flex: 1; min-width: 200px; background-color: rgba(6, 214, 160, 0.1); border-radius: 8px; padding: 15px; border: 1px solid rgba(6, 214, 160, 0.3);">
+                                <h4 style="color: #06D6A0; margin-top: 0;">Increase Inventory</h4>
+                                <p style="margin-bottom: 0;">High sales expected with promotion in effect. Ensure adequate inventory to meet increased demand.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        elif not is_high_value and not is_promotion:
+                            st.markdown("""
+                            <div style="flex: 1; min-width: 200px; background-color: rgba(255, 209, 102, 0.1); border-radius: 8px; padding: 15px; border: 1px solid rgba(255, 209, 102, 0.3);">
+                                <h4 style="color: #FFD166; margin-top: 0;">Optimize Inventory</h4>
+                                <p style="margin-bottom: 0;">Low predicted sales volume. Consider reducing stock levels to minimize holding costs.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown("""
+                            <div style="flex: 1; min-width: 200px; background-color: rgba(255, 209, 102, 0.1); border-radius: 8px; padding: 15px; border: 1px solid rgba(255, 209, 102, 0.3);">
+                                <h4 style="color: #FFD166; margin-top: 0;">Review Promotion Strategy</h4>
+                                <p style="margin-bottom: 0;">Low sales despite promotion. Consider revising promotion strategy or product placement.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        # Decisão de compra
+                        st.markdown("""
+                        <div style="flex: 1; min-width: 200px; background-color: rgba(66, 153, 225, 0.1); border-radius: 8px; padding: 15px; border: 1px solid rgba(66, 153, 225, 0.3);">
+                            <h4 style="color: #4299E1; margin-top: 0;">Purchasing Decision</h4>
+                            <p style="margin-bottom: 0;">Optimize order quantity based on the predicted sales of ${:.2f} units per day.</p>
+                        </div>
+                        """.format(prediction_value), unsafe_allow_html=True)
+                        
+                        st.markdown("""
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+        else:
+            st.error("You must login first to make predictions.")
+            st.markdown("""
+            <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #FF4B4B;">
+                <h4 style="color: #FF4B4B; margin-top: 0;">Authentication Required</h4>
+                <p>Please login using the sidebar to access the prediction functionality.</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 def render_model_insights():
     """
     Render the model insights page.
     """
-    st.title("Model Insights")
-    
+    # Adicionar estilo para a página de insights
     st.markdown("""
-    This page provides insights into the model performance and metrics.
-    """)
+    <style>
+    .insight-card {
+        background-color: #1E1E1E;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 3px solid #4fd1c5;
+        transition: all 0.3s ease;
+    }
     
-    # Accuracy Verification Section
-    st.header("Forecast Accuracy Verification")
+    .insight-card:hover {
+        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        transform: translateY(-2px);
+    }
     
-    # Button to verify accuracy calculations
-    if st.button("Verify Forecast Accuracy Calculation"):
-        try:
-            with st.spinner("Retrieving detailed accuracy metrics..."):
-                headers = {"Authorization": f"Bearer {st.session_state.token}"}
-                response = requests.get(f"{API_URL}/metrics_accuracy_check", headers=headers)
+    .insight-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #333;
+        padding-bottom: 10px;
+    }
+    
+    .metric-card {
+        background-color: #262730;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .metric-value {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 5px 0;
+    }
+    
+    .metric-label {
+        font-size: 12px;
+        color: #aaa;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .gradient-text {
+        background: linear-gradient(90deg, #4fd1c5, #4299e1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: inline-block;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .badge-good {
+        background-color: rgba(6, 214, 160, 0.2);
+        color: #06D6A0;
+    }
+    
+    .badge-warning {
+        background-color: rgba(255, 209, 102, 0.2);
+        color: #FFD166;
+    }
+    
+    .badge-danger {
+        background-color: rgba(255, 75, 75, 0.2);
+        color: #FF4B4B;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Título com gradiente
+    st.markdown("""
+    <h1 class="gradient-text" style="font-size: 36px; margin-bottom: 20px;">Model Insights & Performance</h1>
+    """, unsafe_allow_html=True)
+    
+    # Descrição moderna
+    st.markdown("""
+    <div class="insight-card">
+        <div class="insight-header">
+            <h3 style="color: #4fd1c5; margin: 0; flex-grow: 1;">Performance Analytics</h3>
+            <span class="badge badge-good">ML MONITORING</span>
+        </div>
+        <p>Explore detailed model performance metrics, feature importance, and drift analysis to understand how our forecasting models are performing and identify areas for improvement.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Selecionar modelo
+    if "token" not in st.session_state:
+        st.warning("Please login to view model insights.")
+        st.markdown("""
+        <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #FF4B4B;">
+            <h4 style="color: #FF4B4B; margin-top: 0;">Authentication Required</h4>
+            <p>Please login using the sidebar to access the model insights functionality.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+    
+    # Mostrar modelos disponíveis de forma mais atraente
+    st.markdown("""
+    <div class="insight-card" style="border-left: 3px solid #FFD166;">
+        <div class="insight-header">
+            <h3 style="color: #FFD166; margin: 0;">Available Models</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Modelos disponíveis
+    models = ["LightGBM (Production)", "XGBoost (Staging)", "Prophet (Development)"]
+    
+    # Cartões para cada modelo
+    cols = st.columns(len(models))
+    for i, model in enumerate(models):
+        with cols[i]:
+            if model == "LightGBM (Production)":
+                badge = '<span class="badge badge-good">PRODUCTION</span>'
+                border = "#06D6A0"
+            elif model == "XGBoost (Staging)":
+                badge = '<span class="badge badge-warning">STAGING</span>'
+                border = "#FFD166"
+            else:
+                badge = '<span class="badge badge-danger">DEV</span>'
+                border = "#FF4B4B"
                 
-                if response.status_code == 200:
-                    accuracy_data = response.json()
-                    summary = accuracy_data.get("summary", {})
-                    details = accuracy_data.get("detailed_results", [])
-                    
-                    # Display the summary metrics
-                    st.subheader("Accuracy Summary")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        data_points = summary.get("count", 0)
-                        st.metric("Data Points Used", f"{data_points}")
-                        st.metric("MAPE", f"{summary.get('mape', 0):.2f}%")
-                        st.metric("Forecast Accuracy", f"{summary.get('forecast_accuracy', 0):.2f}%")
-                        
-                    with col2:
-                        st.metric("Mean Error", f"{summary.get('mean_error', 0):.2f}")
-                        st.metric("MAE", f"{summary.get('mae', 0):.2f}")
-                        st.metric("RMSE", f"{summary.get('rmse', 0):.2f}")
-                        
-                    st.write(f"**Calculation Method:** {summary.get('calculation_method', 'N/A')}")
-                    
-                    # Display the detailed results
-                    if details:
-                        st.subheader("Sample Data Points")
-                        df = pd.DataFrame(details[:10])  # Show only first 10 for simplicity
-                        
-                        # Reorder columns for better presentation
-                        if not df.empty and set(['store', 'family', 'date', 'predicted', 'actual', 'error', 'percentage_error']).issubset(df.columns):
-                            df = df[['store', 'family', 'date', 'predicted', 'actual', 'error', 'percentage_error']]
-                        
-                        st.dataframe(df)
-                        
-                        # Create error distribution chart
-                        if len(details) >= 5:
-                            st.subheader("Error Distribution")
-                            error_df = pd.DataFrame(details)
-                            
-                            fig = px.histogram(
-                                error_df, 
-                                x="percentage_error",
-                                nbins=20,
-                                title="Percentage Error Distribution",
-                                labels={"percentage_error": "Percentage Error (%)"}
-                            )
-                            
-                            fig.update_layout(
-                                template='plotly_dark',
-                                height=400,
-                                margin=dict(l=10, r=10, t=30, b=10)
-                            )
-                            
-                            st.plotly_chart(fig, use_container_width=True)
-                            
-                            # Create scatter plot of predicted vs actual
-                            st.subheader("Predicted vs Actual")
-                            fig = px.scatter(
-                                error_df,
-                                x="actual",
-                                y="predicted",
-                                hover_data=["store", "family", "date", "error", "percentage_error"],
-                                title="Predicted vs Actual Values",
-                                labels={"actual": "Actual Sales", "predicted": "Predicted Sales"}
-                            )
-                            
-                            # Add perfect prediction line
-                            max_val = max(error_df["actual"].max(), error_df["predicted"].max())
-                            fig.add_shape(
-                                type="line",
-                                x0=0, y0=0,
-                                x1=max_val, y1=max_val,
-                                line=dict(color="green", width=2, dash="dash")
-                            )
-                            
-                            fig.update_layout(
-                                template='plotly_dark',
-                                height=500,
-                                margin=dict(l=10, r=10, t=30, b=10)
-                            )
-                            
-                            st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.warning("No detailed data points available for verification.")
-                else:
-                    st.error(f"Failed to fetch accuracy metrics: {response.status_code} - {response.text}")
-        except Exception as e:
-            st.error(f"Error verifying accuracy: {str(e)}")
-
-    # Recent Predictions Section
-    st.header("Recent Predictions")
+            st.markdown(f"""
+            <div style="background-color: #262730; border-radius: 8px; padding: 15px; text-align: center; border-left: 3px solid {border}; cursor: pointer;" 
+                 onclick="alert('Select this model')">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: #fff;">{model.split(' ')[0]}</h4>
+                    {badge}
+                </div>
+                <p style="font-size: 12px; opacity: 0.7; margin: 0; text-align: left;">{model.split(' ')[1].replace('(', '').replace(')', '')}</p>
+            </div>
+            """, unsafe_allow_html=True)
     
-    # Button to show recent predictions with accuracy
-    if st.button("Show Recent Predictions"):
-        try:
-            with st.spinner("Retrieving recent predictions..."):
-                headers = {"Authorization": f"Bearer {st.session_state.token}"}
-                response = requests.get(f"{API_URL}/recent_predictions", headers=headers)
-                
-                if response.status_code == 200:
-                    predictions = response.json()
-                    
-                    if predictions:
-                        # Convert to DataFrame for easier display
-                        df = pd.DataFrame([
-                            {
-                                "Store": p['store_nbr'],
-                                "Family": p['family'],
-                                "Date": p['date'],
-                                "Predicted": p['predicted_sales'],
-                                "Actual": p['actual_sales'] if p['actual_sales'] is not None else "N/A",
-                                "Error %": p['accuracy_metrics']['percentage_error'] if p['accuracy_metrics'] else "N/A",
-                                "Accuracy": f"{p['accuracy_metrics']['accuracy']:.2f}%" if p['accuracy_metrics'] else "N/A"
-                            } 
-                            for p in predictions
-                        ])
-                        
-                        st.dataframe(df)
-                        
-                        # Calculate overall accuracy from available data points
-                        valid_predictions = [p for p in predictions if p['accuracy_metrics']]
-                        if valid_predictions:
-                            avg_accuracy = sum(p['accuracy_metrics']['accuracy'] for p in valid_predictions) / len(valid_predictions)
-                            st.metric("Average Accuracy (Recent Predictions)", f"{avg_accuracy:.2f}%")
-                        else:
-                            st.warning("No validation data available for recent predictions.")
-                    else:
-                        st.warning("No recent predictions found.")
-                else:
-                    st.error(f"Failed to fetch recent predictions: {response.status_code} - {response.text}")
-        except Exception as e:
-            st.error(f"Error retrieving recent predictions: {str(e)}")
-            
-    # Existing content
-    st.header("Model Metrics")
+    st.markdown("</div>", unsafe_allow_html=True)
     
-    # Model selection
-    models = ["LightGBM (Production)", "Prophet (Staging)", "ARIMA (Development)"]
-    selected_model = st.selectbox("Select Model", models)
+    # Continuar com o resto do código
+    st.markdown("""
+    <div class="insight-card">
+        <div class="insight-header">
+            <h3 style="color: #4fd1c5; margin: 0;">Model Selection</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    model_name = st.selectbox("Select Model to Analyze", 
+                            ["LightGBM (Production)", "XGBoost (Staging)", "Prophet (Development)"],
+                            index=0)
+    
+    # Time period para análise
+    col1, col2 = st.columns(2)
+    with col1:
+        days = st.slider("Historical Period (days)", min_value=7, max_value=90, value=30, step=7)
+    with col2:
+        threshold = st.slider("Performance Threshold (%)", min_value=50, max_value=95, value=75, step=5)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
     
     # Load model metrics
-    try:
-        headers = {"Authorization": f"Bearer {st.session_state.token}"}
-        response = requests.get(
-            f"{API_URL}/model_metrics?model_name={selected_model}",
-            headers=headers
-        )
-        
-        if response.status_code == 200:
-            model_metrics = response.json()
+    with st.spinner("Loading model performance metrics..."):
+        try:
+            metrics = get_model_metrics(st.session_state.token, model_name)
             
-            # Model performance metrics
-            st.subheader("Performance Metrics")
-            
-            col1, col2, col3, col4 = st.columns(4)
-            
-            col1.metric("RMSE", f"{model_metrics.get('rmse', 0):.2f}", model_metrics.get('rmse_change'))
-            col2.metric("MAE", f"{model_metrics.get('mae', 0):.2f}", model_metrics.get('mae_change'))
-            col3.metric("MAPE", f"{model_metrics.get('mape', 0):.1f}%", model_metrics.get('mape_change'))
-            col4.metric("R²", f"{model_metrics.get('r2', 0):.2f}", model_metrics.get('r2_change'))
-        else:
-            st.warning("Unable to fetch model metrics from API.")
-            # Don't show metrics if unable to fetch real ones
-    except Exception as e:
-        st.warning(f"Error fetching model metrics: {str(e)}")
-    
-    # Get real feature importance from API
-    try:
-        headers = {"Authorization": f"Bearer {st.session_state.token}"}
-        feat_imp_response = requests.get(
-            f"{API_URL}/feature_importance",
-            params={"model_name": selected_model},
-            headers=headers
-        )
-        
-        if feat_imp_response.status_code == 200:
-            feature_imp_data = feat_imp_response.json()
-            
-            # Feature importance
-            st.subheader("Feature Importance")
-            
-            # Create dataframe for chart
-            feat_imp = pd.DataFrame(feature_imp_data)
-            
-            # Create horizontal bar chart
-            fig = px.bar(
-                feat_imp.sort_values('importance', ascending=True), 
-                y='feature', 
-                x='importance',
-                orientation='h',
-                title="Feature Importance",
-                height=500,
-                color='importance',
-                color_continuous_scale='Viridis'
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Unable to fetch feature importance data from API.")
-    except Exception as e:
-        st.warning(f"Error fetching feature importance: {str(e)}")
-    
-    # Show model drift
-    st.subheader("Model Drift")
-    try:
-        headers = {"Authorization": f"Bearer {st.session_state.token}"}
-        drift_response = requests.get(
-            f"{API_URL}/model_drift",
-            params={"model_name": selected_model, "days": 7},
-            headers=headers
-        )
-        
-        if drift_response.status_code == 200:
-            drift_data = drift_response.json()
-            
-            # Check if we have data
-            if drift_data and "dates" in drift_data and len(drift_data["dates"]) > 0:
-                # Create a DataFrame for plotting
-                drift_df = pd.DataFrame({
-                    "date": drift_data["dates"],
-                    "rmse": drift_data["rmse"],
-                    "mae": drift_data["mae"],
-                    "drift_score": drift_data["drift_score"]
-                })
+            if metrics:
+                # Overall performance 
+                st.markdown("""
+                <div class="insight-card">
+                    <div class="insight-header">
+                        <h3 style="color: #4fd1c5; margin: 0;">Performance Overview</h3>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                """, unsafe_allow_html=True)
                 
-                # Plot drift metrics
-                fig = make_subplots(rows=2, cols=1, 
-                                    subplot_titles=("Model Metrics Over Time", "Drift Score"),
-                                    vertical_spacing=0.1)
+                # Determine color based on value
+                def get_metric_color(value, metric_type):
+                    if metric_type == "accuracy" or metric_type == "r2":
+                        if value >= 0.8:
+                            return "#06D6A0"  # Good (green)
+                        elif value >= 0.6:
+                            return "#FFD166"  # Warning (yellow)
+                        else:
+                            return "#FF4B4B"  # Bad (red)
+                    elif metric_type == "rmse" or metric_type == "mae":
+                        if value <= 10:
+                            return "#06D6A0"  # Good (green)
+                        elif value <= 25:
+                            return "#FFD166"  # Warning (yellow)
+                        else:
+                            return "#FF4B4B"  # Bad (red)
+                    else:
+                        return "#4fd1c5"  # Default
                 
-                # Add RMSE trace
-                fig.add_trace(
-                    go.Scatter(x=drift_df["date"], y=drift_df["rmse"], name="RMSE"),
-                    row=1, col=1
-                )
+                # Create metric cards with appropriate colors
+                metric_data = [
+                    {"name": "Accuracy", "value": metrics.get("accuracy", 0) * 100, "format": "%.1f%%", "type": "accuracy"},
+                    {"name": "RMSE", "value": metrics.get("rmse", 0), "format": "%.2f", "type": "rmse"},
+                    {"name": "MAE", "value": metrics.get("mae", 0), "format": "%.2f", "type": "mae"},
+                    {"name": "R² Score", "value": metrics.get("r2", 0), "format": "%.3f", "type": "r2"}
+                ]
                 
-                # Add MAE trace
-                fig.add_trace(
-                    go.Scatter(x=drift_df["date"], y=drift_df["mae"], name="MAE"),
-                    row=1, col=1
-                )
+                for metric in metric_data:
+                    color = get_metric_color(metric["value"] / 100 if metric["name"] == "Accuracy" else metric["value"], metric["type"])
+                    
+                    st.markdown(f"""
+                    <div style="flex: 1; min-width: 150px;">
+                        <div class="metric-card" style="border-top: 3px solid {color};">
+                            <div class="metric-label">{metric["name"]}</div>
+                            <div class="metric-value" style="color: {color};">{metric["format"] % metric["value"]}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-                # Add Drift Score trace
-                fig.add_trace(
-                    go.Bar(x=drift_df["date"], y=drift_df["drift_score"], name="Drift Score (%)"),
-                    row=2, col=1
-                )
+                st.markdown("""
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                fig.update_layout(height=600)
-                st.plotly_chart(fig, use_container_width=True)
+                # Feature importance
+                with st.spinner("Loading feature importance..."):
+                    feature_importance = get_feature_importance(st.session_state.token, model_name)
+                    
+                    if feature_importance and isinstance(feature_importance, list):
+                        # Organize data for visualization
+                        feature_df = pd.DataFrame(feature_importance)
+                        
+                        if not feature_df.empty and "feature" in feature_df.columns and "importance" in feature_df.columns:
+                            # Sort by importance
+                            feature_df = feature_df.sort_values("importance", ascending=False).head(10)
+                            
+                            st.markdown("""
+                            <div class="insight-card">
+                                <div class="insight-header">
+                                    <h3 style="color: #4fd1c5; margin: 0;">Feature Importance</h3>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Create animated bar chart
+                            fig = px.bar(
+                                feature_df,
+                                x="importance",
+                                y="feature",
+                                orientation="h",
+                                color="importance",
+                                color_continuous_scale=["#4299e1", "#4fd1c5", "#06D6A0"],
+                                title="Top 10 Most Important Features"
+                            )
+                            
+                            fig.update_layout(
+                                template="plotly_dark",
+                                xaxis_title="Relative Importance",
+                                yaxis_title="",
+                                coloraxis_showscale=False,
+                                height=500
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Add insights about top features
+                            top_features = feature_df.head(3)
+                            
+                            st.markdown("""
+                            <div style="background-color: #262730; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                                <h4 style="color: #FFD166; margin-top: 0;">Key Findings</h4>
+                                <ul style="margin-bottom: 0; padding-left: 20px;">
+                            """, unsafe_allow_html=True)
+                            
+                            for _, row in top_features.iterrows():
+                                st.markdown(f"""
+                                <li style="margin-bottom: 8px;"><strong style="color: #4fd1c5;">{row['feature']}</strong> is the most significant feature, accounting for <strong>{row['importance']:.1f}%</strong> of the model's predictive power.</li>
+                                """, unsafe_allow_html=True)
+                            
+                            st.markdown("""
+                                </ul>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        st.warning("Feature importance data is not available for this model.")
+                
+                # Model drift analysis
+                with st.spinner("Analyzing model drift..."):
+                    drift_data = get_model_drift(st.session_state.token, model_name, days)
+                    
+                    if drift_data and isinstance(drift_data, dict) and "dates" in drift_data and "accuracy" in drift_data:
+                        drift_df = pd.DataFrame({
+                            "date": drift_data["dates"],
+                            "accuracy": drift_data["accuracy"]
+                        })
+                        
+                        st.markdown("""
+                        <div class="insight-card">
+                            <div class="insight-header">
+                                <h3 style="color: #4fd1c5; margin: 0;">Model Drift Analysis</h3>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Create line chart for model drift
+                        fig = px.line(
+                            drift_df,
+                            x="date",
+                            y="accuracy",
+                            markers=True,
+                            title=f"Model Accuracy Over Time (Last {days} Days)",
+                            color_discrete_sequence=["#4fd1c5"]
+                        )
+                        
+                        # Add threshold line
+                        fig.add_shape(
+                            type="line",
+                            x0=drift_df["date"].min(),
+                            x1=drift_df["date"].max(),
+                            y0=threshold / 100,
+                            y1=threshold / 100,
+                            line=dict(color="#FF4B4B", width=2, dash="dash")
+                        )
+                        
+                        # Add annotation for threshold
+                        fig.add_annotation(
+                            x=drift_df["date"].max(),
+                            y=threshold / 100,
+                            text=f"Threshold ({threshold}%)",
+                            showarrow=False,
+                            yshift=10,
+                            font=dict(color="#FF4B4B")
+                        )
+                        
+                        fig.update_layout(
+                            template="plotly_dark",
+                            xaxis_title="Date",
+                            yaxis_title="Accuracy",
+                            yaxis=dict(tickformat=".0%"),
+                            height=400
+                        )
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Calculate drift metrics
+                        current_accuracy = drift_df["accuracy"].iloc[-1] if not drift_df.empty else 0
+                        avg_accuracy = drift_df["accuracy"].mean() if not drift_df.empty else 0
+                        min_accuracy = drift_df["accuracy"].min() if not drift_df.empty else 0
+                        
+                        drift_analysis = ""
+                        drift_status = ""
+                        
+                        if current_accuracy < threshold / 100:
+                            drift_status = '<span class="badge badge-danger">CRITICAL</span>'
+                            drift_analysis = "Model is currently performing below the acceptable threshold. Retraining is required."
+                        elif current_accuracy < avg_accuracy * 0.95:
+                            drift_status = '<span class="badge badge-warning">DRIFT DETECTED</span>'
+                            drift_analysis = "Model is showing signs of drift. Consider retraining soon."
+                        else:
+                            drift_status = '<span class="badge badge-good">STABLE</span>'
+                            drift_analysis = "Model is performing stably. No immediate action required."
+                        
+                        st.markdown(f"""
+                        <div style="background-color: #262730; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h4 style="color: #FFD166; margin: 0;">Drift Status</h4>
+                                {drift_status}
+                            </div>
+                            <p style="margin-bottom: 15px;">{drift_analysis}</p>
+                            
+                            <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                                <div style="flex: 1; min-width: 120px; background-color: #1a1a1a; padding: 10px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 11px; text-transform: uppercase; color: #888;">Current</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #4fd1c5;">{current_accuracy:.1%}</div>
+                                </div>
+                                <div style="flex: 1; min-width: 120px; background-color: #1a1a1a; padding: 10px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 11px; text-transform: uppercase; color: #888;">Average</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #4fd1c5;">{avg_accuracy:.1%}</div>
+                                </div>
+                                <div style="flex: 1; min-width: 120px; background-color: #1a1a1a; padding: 10px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 11px; text-transform: uppercase; color: #888;">Minimum</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #4fd1c5;">{min_accuracy:.1%}</div>
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        st.warning("Model drift data is not available for this model and time period.")
             else:
-                st.info("No drift data available for the selected model.")
-        else:
-            st.warning(f"Failed to fetch model drift data: {drift_response.status_code} - {drift_response.text}")
-    except Exception as e:
-        st.warning(f"Error fetching model drift data: {str(e)}")
-        st.info("Model drift monitoring is not available at this time.")
+                st.error("Failed to fetch model metrics. Please try again later.")
+        except Exception as e:
+            st.error(f"Error fetching model insights: {str(e)}")
+            st.markdown("""
+            <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #FF4B4B;">
+                <h4 style="color: #FF4B4B; margin-top: 0;">Error Loading Insights</h4>
+                <p>There was a problem loading the model insights. This could be due to API unavailability or mock data limitations.</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 def render_settings():
     """
@@ -1322,29 +2050,127 @@ def main():
     
     # Render selected page
     if "token" not in st.session_state:
-        # Show welcome screen if not logged in
-        st.title("Welcome to Store Sales Forecast Dashboard")
+        # Banner superior personalizado em vez do warning padrão
+        st.markdown("""
+        <div class="custom-top-banner">
+            <div class="banner-icon">⚠️</div>
+            <div class="banner-text">Please login to view the complete dashboard. Use the sidebar to login.</div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        col1, col2 = st.columns([2, 1])
+        # Substituir o banner de aviso por um mais visível e atraente
+        st.markdown("""
+        <div class="login-banner">
+            <div class="login-banner-icon">🔒</div>
+            <div class="login-banner-text">Please login using the sidebar to access the complete dashboard.</div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        with col1:
-            st.markdown("""
-            ### Please login to access the dashboard
-            
-            This dashboard provides insights into store sales forecasts, allowing you to:
-            
-            - View sales trends across different stores and product families
-            - Make predictions for specific stores and dates
-            - Understand model performance and feature importance
-            - Monitor for model drift and data quality issues
-            
-            Login using the form in the sidebar to get started.
-            """)
+        # Custom CSS for gradient backgrounds and card animations
+        st.markdown("""
+        <style>
+        .gradient-header {
+            background: linear-gradient(90deg, #4fd1c5 0%, #4299e1 100%);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
         
-        with col2:
-            # Sample image or icon
-            st.image("https://cdn-icons-png.flaticon.com/512/6295/6295417.png", width=200)
-    
+        .dashboard-card {
+            background-color: #1E1E1E;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 3px solid #4fd1c5;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .feature-icon {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #4fd1c5;
+        }
+        
+        .stats-card {
+            background-color: #262730;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            text-align: center;
+            border-bottom: 3px solid #FFD166;
+        }
+        
+        .stats-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFD166;
+            margin: 5px 0;
+        }
+        
+        .stats-label {
+            font-size: 12px;
+            color: #cccccc;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .badge-ml {
+            background-color: rgba(79, 209, 197, 0.2);
+            color: #4fd1c5;
+        }
+        
+        .badge-api {
+            background-color: rgba(255, 75, 75, 0.2);
+            color: #FF4B4B;
+        }
+        
+        .badge-viz {
+            background-color: rgba(255, 209, 102, 0.2);
+            color: #FFD166;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Modern Design Header - Inspired by smartphone UI - substitui o header gradiente padrão
+        st.markdown("""
+        <div style="position: relative; padding: 50px 30px; overflow: hidden; margin: 20px 0 40px 0; border-radius: 15px; background-color: rgba(30, 30, 46, 0.3);">
+            <!-- Gradient Circles Background -->
+            <div style="position: absolute; width: 300px; height: 300px; border-radius: 50%; top: -120px; right: -80px; 
+                background: linear-gradient(135deg, #4fd1c5 0%, rgba(30, 30, 46, 0) 70%); opacity: 0.6; z-index: -1;"></div>
+            <div style="position: absolute; width: 250px; height: 250px; border-radius: 50%; bottom: -100px; left: -80px; 
+                background: linear-gradient(225deg, #4299e1 0%, rgba(30, 30, 46, 0) 70%); opacity: 0.5; z-index: -1;"></div>
+            
+            <!-- Main Content -->
+            <div>
+                <p style="text-transform: uppercase; letter-spacing: 3px; font-size: 14px; color: #4fd1c5; margin-bottom: 5px;">Sales Analytics</p>
+                <h1 style="font-size: 52px; font-weight: 800; margin: 5px 0 20px 0; letter-spacing: -1px;">Store<br>Forecasting</h1>
+                <p style="color: #cccccc; margin-bottom: 25px; font-size: 17px; max-width: 500px; line-height: 1.5;">
+                    The intelligent analytics platform designed with precision and performance for retail sales optimization.
+                </p>
+                <div style="display: inline-block; background: linear-gradient(90deg, #4fd1c5, #4299e1); color: #0e1117; 
+                    padding: 12px 25px; border-radius: 30px; font-weight: 600; font-size: 15px;">
+                    Login to Dashboard
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         # Render the appropriate page
         if st.session_state.page == "Dashboard":
