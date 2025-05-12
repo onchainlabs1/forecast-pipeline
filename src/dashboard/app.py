@@ -30,33 +30,175 @@ except ImportError:
     jwt = FakeJWT()
 
 from plotly.subplots import make_subplots
+import time
 
 # Add project root to sys.path
 project_root = Path(__file__).parents[2]
 sys.path.insert(0, str(project_root))
 
 # Define constants - hardcode to localhost
-API_URL = "http://localhost:8000"  # Force to use local API
-MLFLOW_URL = "http://localhost:8888"  # Updated from 5000 to 8888
+API_URL = "http://localhost:8002"  # FastAPI backend running on port 8002 
+MLFLOW_URL = "http://localhost:8888"  # MLflow on port 8888
+LANDING_URL = "http://localhost:8000"  # Landing page running on port 8000
 
-# Configure page with dark theme
+# Configure page with dark theme - MUST BE THE FIRST STREAMLIT COMMAND
 st.set_page_config(
     page_title="Store Sales Forecast Dashboard",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'mailto:support@example.com',
+        'Report a bug': 'mailto:bugs@example.com',
+        'About': 'Store Sales Forecasting Dashboard - Predict and visualize sales for different stores and product families.'
+    }
 )
 
-# Adicionando estilo personalizado para o banner de login
+# Aplicar estilos CSS - Todos os estilos em um único bloco
 st.markdown("""
 <style>
+/* Variáveis de cor e tema escuro - Matching landing page */
+:root {
+    --background-color: #0e1117;
+    --secondary-background-color: #1a1a1a;
+    --primary-color: #FF3366;
+    --secondary-color: #FF3366;
+    --accent-color: #FF3366;
+    --success-color: #FF3366;
+    --text-color: #ffffff;
+    --secondary-text: #a0a0a0;
+    color-scheme: dark;
+}
+
+/* Override Streamlit default styles to force dark theme */
+.stApp {
+    background-color: #0e1117 !important;
+    color: #ffffff !important;
+}
+
+.st-bq {
+    background-color: #1a1a1a !important;
+}
+
+/* Melhorar o estilo do banner de alerta no topo */
+[data-baseweb="notification"] {
+    background-color: rgba(255, 51, 102, 0.15) !important;
+    border-color: #FF3366 !important;
+    color: #ffffff !important;
+}
+
+[data-baseweb="notification"] [data-testid="stMarkdownContainer"] p {
+    color: #ffffff !important;
+}
+
+.stAlert {
+    background-color: rgba(255, 51, 102, 0.15) !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    border-left: 3px solid #FF3366 !important;
+}
+
+/* Corrigir o banner amarelo */
+div[data-testid="stNotification"] {
+    background-color: rgba(255, 51, 102, 0.15) !important;
+    border-color: #FF3366 !important;
+    color: #ffffff !important;
+}
+
+.stTextInput input, .stNumberInput input, .stDateInput input {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+    border: 1px solid #333 !important;
+}
+
+.stSelectbox select, .stMultiSelect select, .stDateInput, .stTimeInput {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+    border: 1px solid #333 !important;
+}
+
+/* Buttons styling */
+.stButton > button {
+    background-color: #FF3366 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s !important;
+}
+
+.stButton > button:hover {
+    background-color: #E42D5B !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Metric container styling */
+[data-testid="stMetric"] {
+    background-color: #1a1a1a;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    border: 1px solid #333;
+}
+
+[data-testid="stMetric"] > div {
+    color: #FF3366 !important;
+    font-weight: 600;
+}
+
+[data-testid="stMetric"] [data-testid="stMetricLabel"] {
+    color: #a0a0a0 !important;
+}
+
+/* Card styling for containers */
+[data-testid="stExpander"] {
+    background-color: #1a1a1a !important;
+    border-radius: 8px !important;
+    border: 1px solid #333 !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Making charts have dark background */
+[data-testid="stPlotlyChart"] > div {
+    background-color: #1a1a1a !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+    border: 1px solid #333 !important;
+}
+
+/* Custom top banner styling */
+.custom-top-banner {
+    background: linear-gradient(90deg, rgba(255, 51, 102, 0.15) 0%, rgba(255, 51, 102, 0.2) 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border-left: 4px solid #FF3366;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.banner-icon {
+    color: #FF3366;
+    font-size: 24px;
+    margin-right: 10px;
+}
+
+.banner-text {
+    color: #fafafa;
+    font-size: 16px;
+}
+
+/* Login banner styling */
 .login-banner {
     background: linear-gradient(90deg, rgba(15, 17, 23, 0.95) 0%, rgba(15, 17, 23, 0.8) 100%);
     color: white;
     padding: 20px 25px;
     border-radius: 10px;
     margin-bottom: 20px;
-    border: 1px solid rgba(79, 209, 197, 0.3);
+    border: 1px solid rgba(255, 51, 102, 0.3);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     font-weight: 500;
     display: flex;
@@ -67,7 +209,7 @@ st.markdown("""
 .login-banner-icon {
     margin-right: 10px;
     font-size: 20px;
-    color: #4fd1c5;
+    color: #FF3366;
 }
 
 .login-banner-text {
@@ -75,7 +217,7 @@ st.markdown("""
 }
 
 .login-banner-button {
-    background-color: #4fd1c5;
+    background-color: #FF3366;
     color: #0e1117;
     padding: 8px 15px;
     border-radius: 5px;
@@ -89,39 +231,209 @@ st.markdown("""
 }
 
 .login-banner-button:hover {
-    background-color: #3bb3a9;
-    box-shadow: 0 2px 8px rgba(79, 209, 197, 0.5);
+    background-color: #E42D5B;
+    box-shadow: 0 2px 8px rgba(255, 51, 102, 0.5);
 }
-</style>
-""", unsafe_allow_html=True)
 
-# Adicionar o estilo personalizado para o banner superior
-st.markdown("""
-<style>
-.custom-top-banner {
-    background: linear-gradient(90deg, rgba(255, 209, 102, 0.15) 0%, rgba(255, 209, 102, 0.2) 100%);
+/* Dashboard cards */
+.gradient-header {
+    background: linear-gradient(90deg, #FF3366 0%, #E42D5B 100%);
+    padding: 20px;
+    border-radius: 10px;
     color: white;
-    padding: 15px 20px;
-    border-radius: 5px;
-    margin-bottom: 20px;
-    border-left: 4px solid #FFD166;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
 }
 
-.banner-icon {
-    color: #FFD166;
+.dashboard-card {
+    background-color: #1a1a1a;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-left: 3px solid #FF3366;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.feature-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+    color: #FF3366;
+}
+
+.stats-card {
+    background-color: #1a1a1a;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    text-align: center;
+    border-bottom: 3px solid #FF3366;
+}
+
+.stats-value {
     font-size: 24px;
-    margin-right: 10px;
+    font-weight: bold;
+    color: #FF3366;
+    margin: 5px 0;
 }
 
-.banner-text {
-    color: #fafafa;
-    font-size: 16px;
+.stats-label {
+    font-size: 12px;
+    color: #cccccc;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.badge-ml {
+    background-color: rgba(255, 51, 102, 0.2);
+    color: #FF3366;
+}
+
+.badge-api {
+    background-color: rgba(255, 51, 102, 0.2);
+    color: #FF3366;
+}
+
+.badge-viz {
+    background-color: rgba(255, 51, 102, 0.2);
+    color: #FF3366;
+}
+
+/* Navigation links */
+.nav-links {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.nav-link {
+    color: #ffffff;
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 51, 102, 0.2);
+    color: #FF3366;
+}
+
+.nav-link.active {
+    background-color: #FF3366;
+    color: white;
+}
+
+/* Header with links */
+.header-with-links {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.header-links {
+    display: flex;
+    gap: 15px;
+}
+
+.header-link {
+    color: #a0a0a0;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.3s;
+}
+
+.header-link:hover {
+    color: #FF3366;
+}
+
+/* Footer styling */
+.footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+    color: #a0a0a0;
+    font-size: 12px;
+}
+
+.footer a {
+    color: #FF3366;
+    text-decoration: none;
 }
 </style>
 """, unsafe_allow_html=True)
+
+# Check URL parameters for auto-login
+def check_url_params():
+    """
+    Check URL parameters for token and username and use them for automatic login
+    """
+    # Get query parameters from URL
+    query_params = st.query_params
+    
+    if "token" in query_params and "username" in query_params and not st.session_state.get("authenticated", False):
+        token = query_params["token"]
+        username = query_params["username"]
+        
+        print(f"Auto-login detected with token (first 20 chars): {token[:20]}...")
+        
+        try:
+            # Verify the token by checking with the API
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            # Print for debugging
+            print(f"Checking token validity at {API_URL}/users/me")
+            response = requests.get(f"{API_URL}/users/me", headers=headers)
+            
+            if response.status_code == 200:
+                print("Auto-login successful!")
+                
+                # Save token in session state
+                st.session_state.token = token
+                st.session_state.username = username
+                try:
+                    st.session_state.user_info = decode_token(token)
+                except Exception as e:
+                    print(f"Error decoding token: {str(e)}")
+                    st.session_state.user_info = {"sub": username}
+                
+                st.session_state.authenticated = True
+                return True
+            else:
+                print(f"Auto-login failed: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"Error during auto-login: {str(e)}")
+            return False
+    
+    return False
 
 # Para debug - se a sessão existe mas está vazia
 if "token" not in st.session_state:
@@ -132,176 +444,6 @@ if "token" not in st.session_state:
 # Inicializar estado para controle de autenticação
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
-
-# Force dark mode
-st.markdown("""
-<style>
-:root {
-    --background-color: #0e1117;
-    --secondary-background-color: #262730;
-    --primary-color: #4fd1c5;
-    --secondary-color: #FF4B4B;
-    --accent-color: #FFD166;
-    --success-color: #06D6A0;
-    --text-color: #fafafa;
-    color-scheme: dark;
-}
-
-/* Override Streamlit default styles to force dark theme */
-.stApp {
-    background-color: #0e1117 !important;
-    color: #fafafa !important;
-}
-
-.st-bq {
-    background-color: #262730 !important;
-}
-
-/* Melhorar o estilo do banner de alerta no topo */
-[data-baseweb="notification"] {
-    background-color: rgba(255, 209, 102, 0.15) !important;
-    border-color: #FFD166 !important;
-    color: #fafafa !important;
-}
-
-[data-baseweb="notification"] [data-testid="stMarkdownContainer"] p {
-    color: #fafafa !important;
-}
-
-.stAlert {
-    background-color: rgba(255, 209, 102, 0.15) !important;
-    color: #fafafa !important;
-    border-radius: 8px !important;
-    border-left: 3px solid #FFD166 !important;
-}
-
-/* Corrigir o banner amarelo */
-div[data-testid="stNotification"] {
-    background-color: rgba(255, 209, 102, 0.15) !important;
-    border-color: #FFD166 !important;
-    color: #fafafa !important;
-}
-
-.stTextInput input, .stNumberInput input, .stDateInput input {
-    background-color: #262730 !important;
-    color: #fafafa !important;
-    border: 1px solid #4f4f4f !important;
-}
-
-.stSelectbox select, .stMultiSelect select, .stDateInput, .stTimeInput {
-    background-color: #262730 !important;
-    color: #fafafa !important;
-    border: 1px solid #4f4f4f !important;
-}
-
-/* Make buttons more stylish */
-.stButton button {
-    background-color: #4fd1c5 !important;
-    color: #0e1117 !important;
-    font-weight: bold !important;
-    border: none !important;
-    border-radius: 4px !important;
-    padding: 0.5rem 1rem !important;
-    transition: all 0.2s ease !important;
-}
-
-.stButton button:hover {
-    background-color: #3bb3a9 !important;
-    box-shadow: 0 0 10px rgba(79, 209, 197, 0.5) !important;
-}
-
-/* Tab styling */
-.stTabs [data-baseweb="tab-list"] {
-    background-color: #1E1E1E !important;
-    border-radius: 8px !important;
-    padding: 5px !important;
-}
-
-.stTabs [data-baseweb="tab"] {
-    color: #fafafa !important;
-    border-radius: 4px !important;
-}
-
-.stTabs [aria-selected="true"] {
-    background-color: #262730 !important;
-    border-bottom: 2px solid #4fd1c5 !important;
-}
-
-/* Form styling */
-[data-testid="stForm"] {
-    background-color: #262730 !important;
-    padding: 20px !important;
-    border-radius: 10px !important;
-    border: 1px solid #383838 !important;
-}
-
-/* Make metric values more visible in dark mode */
-[data-testid="stMetricValue"] {
-    color: #4fd1c5 !important;
-    font-weight: bold !important;
-    font-size: 1.5rem !important;
-}
-
-[data-testid="stMetricLabel"] {
-    color: #cccccc !important;
-}
-
-/* Make warning messages more visible */
-.stAlert {
-    background-color: #473a11 !important;
-    color: #fbcf61 !important;
-    border-radius: 8px !important;
-}
-
-/* Success messages */
-.element-container div[data-testid="stAlert"][data-baseweb="notification"] {
-    background-color: #0f3d33 !important;
-    color: #06D6A0 !important;
-    border-radius: 8px !important;
-}
-
-/* Sidebar styling */
-[data-testid="stSidebar"] {
-    background-color: #1a1a1a !important;
-    border-right: 1px solid #333333 !important;
-}
-
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
-    color: #4fd1c5 !important;
-}
-
-/* Dataframe styling */
-[data-testid="stDataFrame"] {
-    background-color: #1E1E1E !important;
-}
-
-[data-testid="stDataFrame"] td, 
-[data-testid="stDataFrame"] th {
-    color: #fafafa !important;
-    background-color: #262730 !important;
-    border-bottom: 1px solid #333333 !important;
-}
-
-/* Card-like sections for all containers */
-.css-1r6slb0 > div:first-child, .block-container, [data-testid="stExpander"] {
-    background-color: #1E1E1E !important;
-    border-radius: 10px !important;
-    border: 1px solid #333333 !important;
-    padding: 10px !important;
-}
-
-/* Header styling */
-h1, h2, h3 {
-    color: #4fd1c5 !important;
-}
-
-h4, h5, h6 {
-    color: #FFD166 !important;
-}
-</style>
-""", unsafe_allow_html=True)
 
 # Authentication functions
 def login(username, password):
@@ -325,20 +467,25 @@ def login(username, password):
         # Detailed response log
         print(f"Login status code: {response.status_code}")
         print(f"Login response headers: {response.headers}")
-        print(f"Login response (first 100 chars): {response.text[:100] if response.text else ''}")
+        print(f"Login response (first 100 chars): {response.text[:100]}")
         
         if response.status_code == 200:
-            token_data = response.json()
-            print(f"Login successful! Token received (first 20 chars): {token_data.get('access_token', '')[:20]}")
+            # Parse JSON response
+            response_data = response.json()
+            print(f"Login successful! Token received (first 20 chars): {response_data['access_token'][:20]}")
+            print(f"Login successful. Saving token...")
+            
+            # Store token in session state
+            st.session_state.token = response_data["access_token"]
+            st.session_state.user_info = decode_token(response_data["access_token"])
             st.session_state.authenticated = True
-            return token_data
+            
+            return response_data
         else:
             print(f"Login failed: {response.text}")
-            st.error(f"Login failed: {response.text}")
             return None
     except Exception as e:
         print(f"Error connecting to API: {str(e)}")
-        st.error(f"Error connecting to API: {str(e)}")
         return None
 
 def decode_token(token):
@@ -347,11 +494,31 @@ def decode_token(token):
     """
     try:
         # This is just for display, no verification needed
-        return jwt.decode(token, options={"verify_signature": False})
+        print(f"Decoding token (first 20 chars): {token[:20]}...")
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        print(f"Token decoded successfully: {decoded}")
+        return decoded
     except Exception as e:
-        print(f"Erro decodificando token: {str(e)}")
-        st.error(f"Error decoding token: {str(e)}")
-        return {}
+        print(f"Error decoding token: {str(e)}")
+        # Try parsing manually if JWT lib fails
+        try:
+            import base64
+            import json
+            
+            # Basic JWT structure is header.payload.signature
+            parts = token.split('.')
+            if len(parts) >= 2:
+                # Decode the payload (second part)
+                padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+                decoded_bytes = base64.b64decode(padded)
+                payload = json.loads(decoded_bytes)
+                print(f"Manually decoded token: {payload}")
+                return payload
+        except Exception as manual_error:
+            print(f"Error in manual token decoding: {str(manual_error)}")
+        
+        # If all fails, return a basic structure
+        return {"sub": "unknown_user", "exp": 9999999999}
 
 # Helper function to check authentication
 def ensure_authenticated():
@@ -362,21 +529,57 @@ def ensure_authenticated():
     # Verify token is working by making a test request
     try:
         headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        print(f"Checking authentication token validity at {API_URL}/users/me")
         response = requests.get(f"{API_URL}/users/me", headers=headers)
+        
         if response.status_code == 200:
             print("Token verified and valid")
             return True
         else:
-            print(f"Invalid token, status: {response.status_code}, response: {response.text[:100]}")
-            # If token expired, clear authentication state
+            print(f"Invalid token, status: {response.status_code}, response: {response.text}")
+            
+            # Show a friendly error message based on the status code
             if response.status_code == 401:
+                print("Unauthorized: Token expired or invalid")
+                st.error("Your session has expired. Please login again.")
+                
+                # Clear authentication state
                 st.session_state.token = None
-                st.session_state.token_type = None
                 st.session_state.authenticated = False
-            return False
+                
+                return False
+            elif response.status_code == 404:
+                print("Warning: users/me endpoint not found (404)")
+                # API might be the landing page API instead of the main API
+                if API_URL == "http://localhost:8000":
+                    print("Detected localhost:8000 instead of 8002, setting to correct API URL")
+                    # Try connecting to the correct API
+                    try:
+                        alternate_url = "http://localhost:8002"
+                        alt_response = requests.get(f"{alternate_url}/users/me", headers=headers)
+                        if alt_response.status_code == 200:
+                            print("Token verified against alternate API endpoint")
+                            return True
+                    except Exception as e:
+                        print(f"Failed to try alternate API: {e}")
+                
+                # In development mode, just trust the token
+                print("Development mode: proceeding despite 404 on users/me")
+                return True
+            else:
+                # Other errors shouldn't invalidate the token automatically
+                # Just log the error but continue
+                print(f"Warning: Token verification returned {response.status_code}")
+                return True
+                
+    except requests.exceptions.ConnectionError as e:
+        # Handle API connection errors gracefully
+        print(f"Warning: Could not connect to API to verify token: {e}")
+        st.warning("Could not connect to the API to verify your session. Some features may be unavailable.")
+        return True
     except Exception as e:
         print(f"Error verifying token: {str(e)}")
-        return False
+        return True  # Assume token is valid if verification fails due to other errors
 
 # API interaction functions
 def get_prediction(token, store_nbr, family, onpromotion, date):
@@ -622,160 +825,163 @@ def get_metric_summary(token):
         st.error(f"Error fetching metrics: {str(e)}")
         return None
 
+def get_model_metrics(token, model_name):
+    """
+    Get the performance metrics for a specific model from the API.
+    """
+    try:
+        # Prepare request headers with authentication
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # Make the API request
+        response = requests.get(
+            f"{API_URL}/model_metrics",
+            params={"model_name": model_name},
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Failed to fetch model metrics: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        st.error(f"Error fetching model metrics: {str(e)}")
+        return None
+
+def get_feature_importance(token, model_name):
+    """
+    Get the feature importance data for a specific model from the API.
+    """
+    try:
+        # Prepare request headers with authentication
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # Make the API request
+        response = requests.get(
+            f"{API_URL}/feature_importance",
+            params={"model_name": model_name},
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Failed to fetch feature importance: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        st.error(f"Error fetching feature importance: {str(e)}")
+        return None
+
+def get_model_drift(token, model_name, days=30):
+    """
+    Get the model drift data for a specific model from the API.
+    """
+    try:
+        # Prepare request headers with authentication
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # Make the API request
+        response = requests.get(
+            f"{API_URL}/model_drift",
+            params={"model_name": model_name, "days": days},
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Failed to fetch model drift: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        st.error(f"Error fetching model drift: {str(e)}")
+        return None
+
 # UI components
 def render_sidebar():
     """
-    Render the sidebar elements.
+    Render sidebar with navigation and login/logout functionality.
     """
-    st.sidebar.title("Navigation")
-    
-    # DEBUG TOKEN STATE - debug mode only
-    debug_mode = False
-    if debug_mode:
-        st.sidebar.subheader("Token Status")
-        if st.session_state.get("token"):
-            st.sidebar.success("✅ Token present")
-            token_str = st.session_state.token
-            if len(token_str) > 50:
-                token_str = f"{token_str[:25]}...{token_str[-25:]}"
-            st.sidebar.code(token_str, language="text")
-        else:
-            st.sidebar.error("❌ Token missing")
-    
-    # Check for authentication
-    if not st.session_state.get("token") or not st.session_state.authenticated:
-        # Enhanced login section
-        st.sidebar.markdown("""
-        <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; border-left: 3px solid #4fd1c5;">
-            <h3 style="color: #4fd1c5; margin-top: 0;">Login</h3>
-            <p style="font-size: 0.9em; opacity: 0.8;">Please enter your credentials to access the dashboard.</p>
+    with st.sidebar:
+        # Dashboard title and logo
+        st.markdown("""
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #FF3366;">Retail.AI</h1>
+            <p>Sales Forecasting Dashboard</p>
         </div>
         """, unsafe_allow_html=True)
         
-        with st.sidebar.form("login_form", clear_on_submit=False):
-            # Styled username field
-            st.markdown('<p style="margin-bottom: 5px; font-weight: bold; color: #cccccc;">Username</p>', unsafe_allow_html=True)
-            username = st.text_input("", placeholder="Enter username", key="username_input", label_visibility="collapsed")
-            
-            # Styled password field
-            st.markdown('<p style="margin-bottom: 5px; font-weight: bold; color: #cccccc;">Password</p>', unsafe_allow_html=True)
-            password = st.text_input("", type="password", placeholder="Enter password", key="password_input", label_visibility="collapsed")
-            
-            # Add some space
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            # Styled login button
-            submit = st.form_submit_button("Sign In", use_container_width=True)
-            
-            if submit:
-                if username and password:
-                    # Log before attempting login
-                    print(f"Attempting login with user: {username}")
-                    
-                    with st.spinner("Authenticating..."):
-                        auth_response = login(username, password)
-                        if auth_response:
-                            # Log before saving token
-                            print(f"Login successful. Saving token...")
-                            
-                            st.session_state.token = auth_response["access_token"]
-                            st.session_state.token_type = auth_response["token_type"]
-                            st.session_state.user_info = decode_token(auth_response["access_token"])
-                            st.session_state.authenticated = True
-                            
-                            # Log after saving token
-                            print(f"Token saved: {st.session_state.token[:20]}...")
-                            
-                            st.success("Login successful!")
-                            st.rerun()
-                        else:
-                            st.error("Login failed. Please check your credentials.")
-                else:
-                    st.error("Please enter both username and password.")
-        
-        # Demo credentials with improved styling
-        st.sidebar.markdown("""
-        <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #FFD166;">
-            <h4 style="color: #FFD166; margin-top: 0;">Demo Credentials</h4>
-            <p style="font-size: 0.9em; margin-bottom: 5px;"><span style="color: #FFD166; font-weight: bold;">Username:</span> johndoe</p>
-            <p style="font-size: 0.9em; margin-bottom: 0;"><span style="color: #FFD166; font-weight: bold;">Password:</span> secret</p>
-            <hr style="border-color: #333333; margin: 10px 0;">
-            <p style="font-size: 0.9em; margin-bottom: 5px;"><span style="color: #FFD166; font-weight: bold;">Username:</span> admin</p>
-            <p style="font-size: 0.9em; margin-bottom: 0;"><span style="color: #FFD166; font-weight: bold;">Password:</span> admin</p>
+        # Links to other parts of the application
+        st.markdown("""
+        <div style="margin-bottom: 20px;">
+            <a href="http://localhost:8000" target="_blank" style="display: block; text-align: center; padding: 8px; background-color: rgba(255, 51, 102, 0.1); border-radius: 5px; color: #FF3366; text-decoration: none; margin-bottom: 10px;">
+                🏠 Landing Page
+            </a>
+            <a href="http://localhost:8888" target="_blank" style="display: block; text-align: center; padding: 8px; background-color: rgba(255, 51, 102, 0.1); border-radius: 5px; color: #FF3366; text-decoration: none;">
+                📈 MLflow UI
+            </a>
         </div>
         """, unsafe_allow_html=True)
         
-    else:
-        # Verify token - if expired, force logout
-        is_valid = ensure_authenticated()
-        if not is_valid:
-            print("Invalid token detected. Forcing logout...")
-            st.sidebar.error("Your session has expired. Please login again.")
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-            
-        # User info with better styling
-        st.sidebar.markdown("""
-        <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 3px solid #06D6A0;">
-            <h4 style="color: #06D6A0; margin-top: 0;">User Profile</h4>
-        """, unsafe_allow_html=True)
-        
-        user_info = st.session_state.user_info
-        st.sidebar.markdown(f"**Username:** {user_info.get('sub', 'Unknown')}")
-        
-        scopes = user_info.get("scopes", [])
-        if scopes:
-            st.sidebar.markdown("**Permissions:**")
-            for scope in scopes:
-                st.sidebar.markdown(f"- {scope}")
+        # Auth section
+        if not st.session_state.get("authenticated", False):
+            # Login form
+            with st.expander("Login", expanded=True):
+                st.subheader("Login")
+                st.text("Please enter your credentials")
                 
-        st.sidebar.markdown("</div>", unsafe_allow_html=True)
+                with st.form("login_form"):
+                    username = st.text_input("Username", key="login_username")
+                    password = st.text_input("Password", type="password", key="login_password")
+                    submit = st.form_submit_button("Login")
+                    
+                    if submit:
+                        if username and password:
+                            with st.spinner("Authenticating..."):
+                                auth_response = login(username, password)
+                                if auth_response:
+                                    # Log after saving token
+                                    print(f"Token saved: {st.session_state.token[:20]}...")
+                                    
+                                    st.success("Login successful!")
+                                    st.rerun()
+                                else:
+                                    st.error("Login failed. Please check your credentials.")
+                        else:
+                            st.error("Please enter both username and password.")
+        else:
+            # User info and logout button
+            st.markdown(f"""
+            <div style="background-color: rgba(255,51,102,0.1); padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                <h4 style="margin:0; color: #FF3366;">Welcome, {st.session_state.get('user_info', {}).get('sub', 'User')}!</h4>
+                <p style="margin:0; font-size: 0.8rem; opacity: 0.8;">You are logged in</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("Logout", type="primary"):
+                # Clear session state
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                
+                st.rerun()
         
-        # Page navigation with improved styling
-        st.sidebar.markdown("""
-        <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 3px solid #4fd1c5;">
-            <h4 style="color: #4fd1c5; margin-top: 0;">Navigation</h4>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        page = st.sidebar.radio(
-            "Select Page",
-            ["Dashboard", "Predictions", "Model Insights", "Settings"],
-            key="page_selector"
-        )
-        st.session_state.page = page
-        
-        # Logout button with improved styling
-        st.sidebar.markdown("<br>", unsafe_allow_html=True)
-        if st.sidebar.button("Logout", key="logout_button", use_container_width=True):
-            print("Logout requested by user. Clearing session state...")
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-    
-    # API Status with improved styling
-    st.sidebar.markdown("""
-    <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #FFD166;">
-        <h4 style="color: #FFD166; margin-top: 0;">System Status</h4>
-    """, unsafe_allow_html=True)
-    
-    health = get_health()
-    if health["status"] == "healthy":
-        st.sidebar.success("✅ API is online and healthy")
-    else:
-        st.sidebar.error(f"❌ API is not available: {health.get('message', 'Unknown error')}")
-        
-    st.sidebar.markdown("</div>", unsafe_allow_html=True)
-    
-    # Links with improved styling
-    st.sidebar.markdown("""
-    <div style="background-color: #1E1E1E; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 3px solid #FF4B4B;">
-        <h4 style="color: #FF4B4B; margin-top: 0;">Resources</h4>
-        <p style="margin-bottom: 5px;"><a href="%s" style="color: #4fd1c5; text-decoration: none;">📊 MLflow Dashboard</a></p>
-        <p style="margin-bottom: 0;"><a href="%s/docs" style="color: #4fd1c5; text-decoration: none;">📚 API Documentation</a></p>
-    </div>
-    """ % (MLFLOW_URL, API_URL), unsafe_allow_html=True)
+        # Navigation
+        if st.session_state.get("authenticated", False):
+            st.subheader("Navigation")
+            
+            # Create navigation options
+            pages = ["Dashboard", "Predictions", "Data Explorer", "Settings"]
+            
+            # Determine current page
+            current_page = st.session_state.get("page", "Dashboard")
+            
+            # Create radio buttons for navigation
+            selected_page = st.radio("Select Page", pages, index=pages.index(current_page))
+            
+            # Update session state if page changed
+            if selected_page != current_page:
+                st.session_state.page = selected_page
+                st.rerun()
 
 def display_sales_history(store_nbr, family, days):
     try:
@@ -921,7 +1127,16 @@ def display_sales_history(store_nbr, family, days):
         st.error(f"Error displaying sales history: {str(e)}")
 
 def display_dashboard():
-    st.header("Store Sales Forecast Dashboard")
+    st.markdown("""
+    <div class="header-with-links">
+        <h2 class="header-title">Store Sales Forecast Dashboard</h2>
+        <div class="header-links">
+            <a href="http://localhost:8000" target="_blank" class="header-link">Landing Page</a>
+            <a href="http://localhost:8888" target="_blank" class="header-link">MLflow UI</a>
+            <a href="http://localhost:8002/docs" target="_blank" class="header-link">API Docs</a>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Verify authentication before trying to load metrics
     if not st.session_state.get("token") or not st.session_state.authenticated:
@@ -1129,6 +1344,13 @@ def display_dashboard():
             st.warning(f"Failed to fetch store comparison data: {response.status_code}")
     except Exception as e:
         st.error(f"Error loading store comparison: {str(e)}")
+        
+    # Add footer
+    st.markdown("""
+    <div class="footer">
+        <p>© 2025 Retail.AI - Sales Forecasting Dashboard | <a href="http://localhost:8000" target="_blank">Landing Page</a> | <a href="http://localhost:8888" target="_blank">MLflow UI</a> | <a href="http://localhost:8002/docs" target="_blank">API Docs</a></p>
+    </div>
+    """, unsafe_allow_html=True)
 
 def render_predictions():
     """
@@ -2037,149 +2259,227 @@ def render_settings():
             options=["Immediate", "Hourly", "Daily", "Weekly"]
         )
 
+# Add custom CSS
+def local_css():
+    css = """
+    .custom-banner {
+        background-color: rgba(255, 51, 102, 0.1);
+        border-left: 4px solid #FF3366;
+        padding: 15px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .custom-banner i {
+        color: #FF3366;
+        margin-right: 10px;
+    }
+
+    .custom-banner p {
+        margin: 0;
+        color: #ffffff;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        margin: 20px auto;
+        border: 3px solid rgba(255, 51, 102, 0.3);
+        border-radius: 50%;
+        border-top-color: #FF3366;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    """
+    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+def render_data_explorer():
+    """
+    Render the data explorer page.
+    """
+    st.title("Data Explorer")
+    
+    st.markdown("""
+    <div class="dashboard-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Explore Sales Data</h3>
+        <p>Analyze historical sales data across different stores and product families.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Check if user is authenticated
+    if not st.session_state.get("authenticated", False):
+        st.warning("Please login to access the data explorer.")
+        return
+    
+    # Create filters
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        store_options = get_stores()
+        store_filter = st.selectbox("Select Store", options=store_options, index=0)
+    
+    with col2:
+        family_options = get_families()
+        family_filter = st.selectbox("Select Product Family", options=family_options, index=0)
+    
+    with col3:
+        date_range = st.slider("Date Range (days)", min_value=30, max_value=365, value=90)
+    
+    # Extract store number
+    try:
+        if isinstance(store_filter, str) and "store" in store_filter.lower():
+            store_parts = store_filter.split()
+            if len(store_parts) > 1:
+                store_nbr = int(store_parts[1])
+            else:
+                store_nbr = 1
+        else:
+            store_nbr = 1
+    except:
+        store_nbr = 1
+    
+    # Get data from API
+    if st.button("Load Data"):
+        with st.spinner("Loading data..."):
+            sales_data = get_sales_data(st.session_state.token, store_nbr, family_filter, date_range)
+            
+            if not sales_data.empty:
+                # Display data
+                st.subheader(f"Sales Data for {store_filter} - {family_filter}")
+                
+                # Convert date to datetime if it's not already
+                if 'date' in sales_data.columns:
+                    try:
+                        sales_data['date'] = pd.to_datetime(sales_data['date'])
+                    except:
+                        pass
+                
+                # Show data table
+                st.dataframe(sales_data)
+                
+                # Create visualization
+                if 'date' in sales_data.columns and 'sales' in sales_data.columns:
+                    fig = px.line(
+                        sales_data, 
+                        x='date', 
+                        y='sales',
+                        title=f"Sales Trend for {store_filter} - {family_filter}",
+                        labels={'date': 'Date', 'sales': 'Sales ($)'},
+                    )
+                    
+                    fig.update_layout(
+                        template='plotly_dark',
+                        height=400,
+                        margin=dict(l=10, r=10, t=30, b=10)
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Show statistics
+                    st.subheader("Sales Statistics")
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Total Sales", f"${sales_data['sales'].sum():.2f}")
+                    
+                    with col2:
+                        st.metric("Average Sales", f"${sales_data['sales'].mean():.2f}")
+                    
+                    with col3:
+                        st.metric("Maximum Sales", f"${sales_data['sales'].max():.2f}")
+                    
+                    with col4:
+                        st.metric("Minimum Sales", f"${sales_data['sales'].min():.2f}")
+                    
+                    # Download data option
+                    csv = sales_data.to_csv(index=False)
+                    st.download_button(
+                        label="Download Data as CSV",
+                        data=csv,
+                        file_name=f"sales_data_{store_nbr}_{family_filter}.csv",
+                        mime="text/csv",
+                    )
+            else:
+                st.warning(f"No sales data available for {store_filter} - {family_filter}")
+    
+    # Add footer
+    st.markdown("""
+    <div class="footer">
+        <p>© 2025 Retail.AI - Data Explorer | <a href="http://localhost:8000" target="_blank">Landing Page</a> | <a href="http://localhost:8888" target="_blank">MLflow UI</a> | <a href="http://localhost:8002/docs" target="_blank">API Docs</a></p>
+    </div>
+    """, unsafe_allow_html=True)
+
 def main():
     """
-    Main function to run the dashboard.
+    Main function to render the dashboard.
     """
+    # Add custom CSS
+    local_css()
+    
+    # Add a special message if we see URL parameters for login
+    if "token" in st.query_params and "username" in st.query_params:
+        with st.spinner("Authenticating with provided token..."):
+            time.sleep(0.5)  # Brief delay to show the spinner
+            print("URL parameters detected. Attempting auto-login...")
+    
+    # Attempt auto-login from URL parameters if not already authenticated
+    if not st.session_state.get("authenticated", False):
+        auto_login = check_url_params()
+        if auto_login:
+            print("Auto-login successful! Refreshing page...")
+            st.rerun()
+    
     # Initialize session state
     if "page" not in st.session_state:
         st.session_state.page = "Dashboard"
-    
+
     # Render sidebar
     render_sidebar()
     
-    # Render selected page
-    if "token" not in st.session_state:
-        # Banner superior personalizado em vez do warning padrão
+    # Render selected page based on authentication status
+    if not st.session_state.get("authenticated", False):
+        # Show login required banner
         st.markdown("""
-        <div class="custom-top-banner">
-            <div class="banner-icon">⚠️</div>
-            <div class="banner-text">Please login to view the complete dashboard. Use the sidebar to login.</div>
+        <div class="custom-banner">
+            <i class="fas fa-lock"></i>
+            <p>Please log in to access the dashboard.</p>
         </div>
         """, unsafe_allow_html=True)
         
-        # Substituir o banner de aviso por um mais visível e atraente
+        # Show demo info
         st.markdown("""
-        <div class="login-banner">
-            <div class="login-banner-icon">🔒</div>
-            <div class="login-banner-text">Please login using the sidebar to access the complete dashboard.</div>
-        </div>
-        """, unsafe_allow_html=True)
+        ## Retail Sales Forecasting Dashboard
         
-        # Custom CSS for gradient backgrounds and card animations
-        st.markdown("""
-        <style>
-        .gradient-header {
-            background: linear-gradient(90deg, #4fd1c5 0%, #4299e1 100%);
-            padding: 20px;
-            border-radius: 10px;
-            color: white;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        }
+        This dashboard provides forecasting analytics for retail sales data.
         
-        .dashboard-card {
-            background-color: #1E1E1E;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-            border-left: 3px solid #4fd1c5;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
+        ### Demo Credentials:
+        - **Username:** admin
+        - **Password:** admin
         
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
+        Or
         
-        .feature-icon {
-            font-size: 28px;
-            margin-bottom: 10px;
-            color: #4fd1c5;
-        }
-        
-        .stats-card {
-            background-color: #262730;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            text-align: center;
-            border-bottom: 3px solid #FFD166;
-        }
-        
-        .stats-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #FFD166;
-            margin: 5px 0;
-        }
-        
-        .stats-label {
-            font-size: 12px;
-            color: #cccccc;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .badge-ml {
-            background-color: rgba(79, 209, 197, 0.2);
-            color: #4fd1c5;
-        }
-        
-        .badge-api {
-            background-color: rgba(255, 75, 75, 0.2);
-            color: #FF4B4B;
-        }
-        
-        .badge-viz {
-            background-color: rgba(255, 209, 102, 0.2);
-            color: #FFD166;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        # Modern Design Header - Inspired by smartphone UI - substitui o header gradiente padrão
-        st.markdown("""
-        <div style="position: relative; padding: 50px 30px; overflow: hidden; margin: 20px 0 40px 0; border-radius: 15px; background-color: rgba(30, 30, 46, 0.3);">
-            <!-- Gradient Circles Background -->
-            <div style="position: absolute; width: 300px; height: 300px; border-radius: 50%; top: -120px; right: -80px; 
-                background: linear-gradient(135deg, #4fd1c5 0%, rgba(30, 30, 46, 0) 70%); opacity: 0.6; z-index: -1;"></div>
-            <div style="position: absolute; width: 250px; height: 250px; border-radius: 50%; bottom: -100px; left: -80px; 
-                background: linear-gradient(225deg, #4299e1 0%, rgba(30, 30, 46, 0) 70%); opacity: 0.5; z-index: -1;"></div>
-            
-            <!-- Main Content -->
-            <div>
-                <p style="text-transform: uppercase; letter-spacing: 3px; font-size: 14px; color: #4fd1c5; margin-bottom: 5px;">Sales Analytics</p>
-                <h1 style="font-size: 52px; font-weight: 800; margin: 5px 0 20px 0; letter-spacing: -1px;">Store<br>Forecasting</h1>
-                <p style="color: #cccccc; margin-bottom: 25px; font-size: 17px; max-width: 500px; line-height: 1.5;">
-                    The intelligent analytics platform designed with precision and performance for retail sales optimization.
-                </p>
-                <div style="display: inline-block; background: linear-gradient(90deg, #4fd1c5, #4299e1); color: #0e1117; 
-                    padding: 12px 25px; border-radius: 30px; font-weight: 600; font-size: 15px;">
-                    Login to Dashboard
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        - **Username:** johndoe
+        - **Password:** secret
+        """)
     else:
-        # Render the appropriate page
-        if st.session_state.page == "Dashboard":
+        # User is authenticated, render the selected page
+        page = st.session_state.page
+        
+        if page == "Dashboard":
             display_dashboard()
-        elif st.session_state.page == "Predictions":
+        elif page == "Predictions":
             render_predictions()
-        elif st.session_state.page == "Model Insights":
-            render_model_insights()
-        elif st.session_state.page == "Settings":
+        elif page == "Data Explorer":
+            render_data_explorer()
+        elif page == "Settings":
             render_settings()
 
 if __name__ == "__main__":

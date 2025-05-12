@@ -3,192 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Forecasting Dashboard</title>
+    <title>Store Sales Forecast Dashboard</title>
     <style>
         :root {
-            --primary-color: #ff007f;
-            --background-color: #111;
-            --card-background: #222;
-            --text-color: #fff;
-            --secondary-text: #aaa;
-            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            --primary-color: #FF3366;
+            --primary-color-hover: #E42D5B;
+            --background-color: #0e1117;
+            --card-background: #1a1a1a;
+            --text-color: #ffffff;
+            --secondary-text: #a0a0a0;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
         body {
             margin: 0;
             padding: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--background-color);
             color: var(--text-color);
             line-height: 1.6;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
         
-        .header {
-            padding: 1rem;
-            background-color: rgba(17, 17, 17, 0.95);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
+        /* Navbar */
+        .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            z-index: 100;
-            backdrop-filter: blur(5px);
+            padding: 1.2rem 5%;
+            position: fixed;
+            width: 100%;
+            background-color: rgba(14, 17, 23, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
         }
         
         .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--text-color);
             display: flex;
             align-items: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--text-color);
+            text-decoration: none;
+        }
+        
+        .logo span {
+            color: var(--primary-color);
+            margin-right: 0.3rem;
         }
         
         .logo-dot {
             color: var(--primary-color);
-            margin: 0 2px;
         }
         
-        .header-right {
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .nav-link {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary-color);
+        }
+        
+        .remix-button {
+            background-color: transparent;
+            color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
             display: flex;
             align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
         }
         
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-            font-size: 1rem;
+        .remix-button:hover {
+            background-color: #FF3366;
+            border-color: #FF3366;
         }
         
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 0, 127, 0.4);
-        }
-        
+        /* Hero Section */
         .hero {
+            padding-top: 8rem;
+            padding-bottom: 4rem;
+            position: relative;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 8rem 2rem 4rem;
             text-align: center;
-            min-height: 70vh;
         }
         
-        .hero h1 {
-            font-size: 4rem;
-            margin-bottom: 1rem;
+        .beta-banner {
+            background-color: rgba(0, 102, 255, 0.1);
+            padding: 0.8rem 2rem;
+            border-radius: 100px;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(0, 102, 255, 0.2);
+        }
+        
+        .beta-banner p {
+            font-size: 1rem;
+            color: var(--text-color);
+        }
+        
+        .hero-title {
+            font-size: 5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            max-width: 800px;
             line-height: 1.2;
         }
         
-        .gradient-text {
-            background: linear-gradient(90deg, #ff007f, #ff884d);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            display: inline;
+        .hero-title .highlight {
+            display: inline-block;
+            color: #FF3366;
+            position: relative;
         }
         
-        .hero p {
-            font-size: 1.2rem;
+        .hero-subtitle {
+            font-size: 1.5rem;
+            max-width: 600px;
+            margin-bottom: 3rem;
             color: var(--secondary-text);
-            max-width: 700px;
+        }
+        
+        .cta-button {
+            background-color: #FF3366;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.125rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
             margin-bottom: 2rem;
+            border: none;
+            cursor: pointer;
         }
         
-        .stats-container {
+        .cta-button:hover {
+            background-color: #E42D5B;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 51, 102, 0.4);
+        }
+        
+        .backed-by {
             display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 2rem;
-            margin: 3rem 0;
-            width: 100%;
-            max-width: 1200px;
-        }
-        
-        .stat-card {
-            background-color: var(--card-background);
-            border-radius: 16px;
-            padding: 2rem;
-            width: 200px;
-            box-shadow: var(--card-shadow);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-        }
-        
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(90deg, #ff007f, #ff884d);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        
-        .stat-label {
-            font-size: 1rem;
+            align-items: center;
+            gap: 0.75rem;
             color: var(--secondary-text);
-        }
-        
-        .cta-container {
             margin-top: 3rem;
         }
         
-        .btn-large {
-            padding: 1rem 2.5rem;
-            font-size: 1.2rem;
-            border-radius: 50px;
-        }
-        
-        .image-container {
-            margin-top: 4rem;
-            width: 100%;
-            max-width: 900px;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: var(--card-shadow);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        .dashboard-preview {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        
-        .feature-section {
-            padding: 4rem 2rem;
-            text-align: center;
-        }
-        
-        .feature-section h2 {
-            font-size: 2.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .features {
+        .backed-by .logo-container {
             display: flex;
-            flex-wrap: wrap;
+            align-items: center;
+            background-color: transparent;
+            width: 28px;
+            height: 28px;
             justify-content: center;
+            border-radius: 4px;
+            font-weight: 700;
+            color: white;
+        }
+        
+        /* 3D Cube Animation */
+        .cube-container {
+            position: absolute;
+            right: 15%;
+            top: 30%;
+            perspective: 800px;
+            width: 100px;
+            height: 100px;
+        }
+        
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: rotate 15s infinite linear;
+        }
+        
+        .cube-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.8;
+        }
+        
+        .cube-front {
+            transform: translateZ(50px);
+            background-color: #FF3366;
+        }
+        
+        .cube-back {
+            transform: rotateY(180deg) translateZ(50px);
+            background-color: #FF3366;
+        }
+        
+        .cube-right {
+            transform: rotateY(90deg) translateZ(50px);
+            background-color: #FF3366;
+        }
+        
+        .cube-left {
+            transform: rotateY(-90deg) translateZ(50px);
+            background-color: #FF3366;
+        }
+        
+        .cube-top {
+            transform: rotateX(90deg) translateZ(50px);
+            background-color: #FF3366;
+        }
+        
+        .cube-bottom {
+            transform: rotateX(-90deg) translateZ(50px);
+            background-color: #FF3366;
+        }
+        
+        @keyframes rotate {
+            0% {
+                transform: rotateX(0) rotateY(0) rotateZ(0);
+            }
+            100% {
+                transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+            }
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 5rem 5%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
             max-width: 1200px;
             margin: 0 auto;
@@ -196,260 +261,841 @@
         
         .feature-card {
             background-color: var(--card-background);
-            border-radius: 16px;
             padding: 2rem;
-            width: 300px;
+            border-radius: 16px;
             box-shadow: var(--card-shadow);
             transition: transform 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-left: 3px solid var(--primary-color);
         }
         
         .feature-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-10px);
         }
         
         .feature-icon {
             font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            color: #FF3366;
         }
         
         .feature-title {
             font-size: 1.5rem;
             margin-bottom: 1rem;
+            color: #FF3366;
         }
         
-        .feature-description {
+        .feature-desc {
+            color: var(--secondary-text);
+            line-height: 1.6;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-top: 1rem;
+            background-color: rgba(255, 51, 102, 0.15);
+            color: #FF3366;
+        }
+        
+        /* Modal Login */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            overflow: auto;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background-color: var(--card-background);
+            margin: 10% auto;
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            color: var(--secondary-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .close-button:hover {
+            color: var(--primary-color);
+        }
+        
+        .modal-title {
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--secondary-text);
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .login-button {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.875rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .login-button:hover {
+            background-color: var(--primary-color-hover);
+            transform: translateY(-2px);
+        }
+        
+        .demo-credentials {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .demo-credentials h4 {
+            color: #FF3366;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .demo-credentials p {
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
             color: var(--secondary-text);
         }
         
-        footer {
-            padding: 3rem 2rem;
+        .demo-credentials strong {
+            color: var(--text-color);
+        }
+        
+        .or-divider {
             text-align: center;
-            background-color: rgba(0, 0, 0, 0.3);
-            margin-top: auto;
-        }
-        
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 3rem;
-            }
-            
-            .stat-card {
-                width: 150px;
-                padding: 1.5rem;
-            }
-            
-            .feature-card {
-                width: 100%;
-                max-width: 400px;
-            }
-        }
-        
-        /* Animation */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .animate {
-            animation: fadeInUp 0.6s ease-out;
-        }
-        
-        .animate-delay-1 {
-            animation-delay: 0.2s;
-        }
-        
-        .animate-delay-2 {
-            animation-delay: 0.4s;
-        }
-        
-        .animate-delay-3 {
-            animation-delay: 0.6s;
-        }
-        
-        .cube {
-            width: 120px;
-            height: 120px;
+            margin: 1.5rem 0;
             position: relative;
-            transform-style: preserve-3d;
-            transform: rotateX(-20deg) rotateY(-30deg);
-            animation: rotate 10s infinite linear;
+        }
+        
+        .or-divider:before,
+        .or-divider:after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .or-divider:before {
+            left: 0;
+        }
+        
+        .or-divider:after {
+            right: 0;
+        }
+        
+        /* Footer */
+        footer {
+            padding: 3rem 5%;
+            background-color: var(--card-background);
+            text-align: center;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
             margin-bottom: 2rem;
         }
         
-        @keyframes rotate {
-            from {
-                transform: rotateX(-20deg) rotateY(0deg);
+        .footer-link {
+            color: var(--secondary-text);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer-link:hover {
+            color: #FF3366;
+        }
+        
+        .footer-text {
+            color: var(--secondary-text);
+            font-size: 0.875rem;
+        }
+        
+        .footer-text a {
+            color: #FF3366;
+            text-decoration: none;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 900px) {
+            .hero-title {
+                font-size: 3.5rem;
             }
-            to {
-                transform: rotateX(-20deg) rotateY(360deg);
+            
+            .cube-container {
+                right: 5%;
+                top: 15%;
+            }
+            
+            .nav-links {
+                display: none;
             }
         }
         
-        .cube-face {
-            position: absolute;
-            width: 120px;
-            height: 120px;
-            border: 2px solid rgba(255, 0, 127, 0.5);
-            opacity: 0.7;
+        @media (max-width: 600px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .hero-subtitle {
+                font-size: 1.25rem;
+            }
+            
+            .cube-container {
+                display: none;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
         }
         
-        .cube-face-front {
-            transform: translateZ(60px);
-            background-color: rgba(255, 0, 127, 0.1);
+        /* Custom animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        .cube-face-back {
-            transform: translateZ(-60px) rotateY(180deg);
-            background-color: rgba(255, 0, 127, 0.1);
+        .animated {
+            animation: fadeIn 0.8s ease-out forwards;
         }
         
-        .cube-face-right {
-            transform: translateX(60px) rotateY(90deg);
-            background-color: rgba(255, 0, 127, 0.1);
+        /* Tech Stack Section */
+        .tech-stack {
+            padding: 5rem 5%;
+            background-color: var(--background-color);
+            text-align: center;
         }
         
-        .cube-face-left {
-            transform: translateX(-60px) rotateY(-90deg);
-            background-color: rgba(255, 0, 127, 0.1);
+        .tech-stack-title {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
         }
         
-        .cube-face-top {
-            transform: translateY(-60px) rotateX(90deg);
-            background-color: rgba(255, 0, 127, 0.1);
+        .tech-stack-subtitle {
+            font-size: 1.1rem;
+            color: var(--secondary-text);
+            max-width: 700px;
+            margin: 0 auto 3rem;
         }
         
-        .cube-face-bottom {
-            transform: translateY(60px) rotateX(-90deg);
-            background-color: rgba(255, 0, 127, 0.1);
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .tech-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .tech-icon {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--card-background);
+            border-radius: 12px;
+            font-size: 2rem;
+        }
+        
+        .tech-name {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        
+        /* Architecture Section */
+        .architecture {
+            padding: 5rem 5%;
+            background-color: #0a0d12;
+        }
+        
+        .architecture-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .architecture-title {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+            text-align: center;
+        }
+        
+        .architecture-description {
+            font-size: 1.1rem;
+            color: var(--secondary-text);
+            margin-bottom: 3rem;
+            text-align: center;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .architecture-diagram {
+            margin-top: 2rem;
+            padding: 2rem;
+            background-color: var(--card-background);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .diagram-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        
+        .diagram-item {
+            padding: 1.5rem 1rem;
+            border-radius: 12px;
+            text-align: center;
+            background-color: rgba(255, 51, 102, 0.1);
+            border: 1px solid rgba(255, 51, 102, 0.2);
+        }
+        
+        .diagram-item-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+        
+        .diagram-item-desc {
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+        }
+        
+        .diagram-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .diagram-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .diagram-arrow {
+                transform: rotate(90deg);
+                margin: 1rem 0;
+            }
+        }
+        
+        .architecture-details .row {
+            margin-bottom: 20px;
+        }
+        
+        .feature-list {
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+        
+        .feature-list li {
+            margin-bottom: 5px;
+            color: #e0e0e0;
+        }
+        
+        .architecture-flow {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+        
+        .flow-item {
+            background-color: rgba(255, 51, 102, 0.15);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: 500;
+        }
+        
+        .flow-arrow {
+            color: #FF3366;
+            font-size: 20px;
+            margin: 0 5px;
+        }
+        
+        .tech-badges {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .tech-badge {
+            background-color: rgba(255, 51, 102, 0.15);
+            color: #FF3366;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: 500;
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo">
-            Sales<span class="logo-dot">.</span>Forecast
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M27 5H5V35H27V5Z" fill="#FF3366" />
+                <path d="M32 5H27V35H32V5Z" fill="#E42D5B" />
+                <path d="M37 5H32V35H37V5Z" fill="#CB2651" />
+                <text x="42" y="25" font-family="Inter, sans-serif" font-size="16" font-weight="700" fill="white">Retail.AI</text>
+                <circle cx="22" cy="20" r="3" fill="#ffffff" />
+            </svg>
+        </a>
+        <div class="nav-links">
+            <a href="#features" class="nav-link">Features</a>
+            <a href="http://localhost:8501" target="_blank" class="nav-link">Dashboard</a>
+            <a href="http://localhost:8888" target="_blank" class="nav-link">MLflow</a>
+            <a href="https://github.com/your-username/mlproject" class="nav-link">GitHub</a>
         </div>
-        <div class="header-right">
-            <a href="http://localhost:8501" class="btn btn-primary">Login Dashboard</a>
-        </div>
-    </header>
+        <button class="remix-button" onclick="openLoginModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4L20 20H4L12 4Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Login
+        </button>
+    </nav>
     
-    <main>
-        <section class="hero">
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="beta-banner animated">
+            <p>Portfolio Project: End-to-End ML Pipeline for Sales Forecasting</p>
+        </div>
+        
+        <h1 class="hero-title animated" style="animation-delay: 0.1s;">
+            Retail forecasting 
+            <div class="highlight">reimagined</div>
+        </h1>
+        
+        <p class="hero-subtitle animated" style="animation-delay: 0.2s;">
+            AI-powered retail analytics to solve the $1.1 trillion inventory optimization problem. This portfolio project showcases a complete retail forecasting pipeline from POS data to actionable inventory insights.
+        </p>
+        
+        <a href="http://localhost:8501" target="_blank" class="cta-button animated" style="animation-delay: 0.3s; text-decoration: none;">
+            EXPLORE DASHBOARD
+        </a>
+        
+        <div class="backed-by animated" style="animation-delay: 0.4s;">
+            <span>Available on</span>
+            <div class="logo-container" style="font-size: 0.85rem; background-color: transparent; padding: 0 6px; display: flex; align-items: center; gap: 5px; border-radius: 6px;">
+                <svg height="24" width="24" viewBox="0 0 16 16" fill="#181717" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+                GitHub
+            </div>
+        </div>
+        
+        <!-- 3D Cube Animation -->
+        <div class="cube-container animated" style="animation-delay: 0.5s;">
             <div class="cube">
-                <div class="cube-face cube-face-front"></div>
-                <div class="cube-face cube-face-back"></div>
-                <div class="cube-face cube-face-right"></div>
-                <div class="cube-face cube-face-left"></div>
-                <div class="cube-face cube-face-top"></div>
-                <div class="cube-face cube-face-bottom"></div>
+                <div class="cube-face cube-front"></div>
+                <div class="cube-face cube-back"></div>
+                <div class="cube-face cube-right"></div>
+                <div class="cube-face cube-left"></div>
+                <div class="cube-face cube-top"></div>
+                <div class="cube-face cube-bottom"></div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="feature-card animated" style="animation-delay: 0.2s;">
+            <div class="feature-icon">📊</div>
+            <h3 class="feature-title">Demand Forecasting</h3>
+            <p class="feature-desc">
+                Predict future product demand with ML models that account for seasonality, promotions, and market trends to optimize inventory levels.
+            </p>
+            <div class="badge">Retail Analytics</div>
+        </div>
+        
+        <div class="feature-card animated" style="animation-delay: 0.3s;">
+            <div class="feature-icon">🔍</div>
+            <h3 class="feature-title">Store Performance</h3>
+            <p class="feature-desc">
+                Analyze store-level metrics to identify high and low-performing locations, optimize assortment planning, and improve sales outcomes.
+            </p>
+            <div class="badge">Store Operations</div>
+        </div>
+        
+        <div class="feature-card animated" style="animation-delay: 0.4s;">
+            <div class="feature-icon">🚀</div>
+            <h3 class="feature-title">Inventory Optimization</h3>
+            <p class="feature-desc">
+                Reduce stockouts and overstock situations with precise forecasts, leading to improved working capital and customer satisfaction.
+            </p>
+            <div class="badge">Supply Chain</div>
+        </div>
+    </section>
+    
+    <!-- Architecture Section -->
+    <section id="architecture" class="section" style="text-align: center;">
+        <div class="container">
+            <h2 class="section-title animated" style="animation-delay: 0s; color: #FF3366; font-size: 2.5rem; font-weight: bold;">Project Architecture</h2>
+            <p class="section-subtitle animated" style="animation-delay: 0.1s;">An end-to-end ML system with data processing, model training, API serving, and interactive dashboards.</p>
+            
+            <div class="architecture-diagram animated" style="animation-delay: 0.2s; margin-bottom: 40px; display: inline-block;">
+                <!-- Inline SVG Architecture Diagram -->
+                <svg width="100%" height="500" viewBox="0 0 1000 500" style="max-width: 100%; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); background-color: #0e1117;">
+                    <!-- Title -->
+                    <text x="500" y="50" font-size="24" font-weight="bold" fill="#FF3366" text-anchor="middle">Retail.AI Architecture</text>
+                    
+                    <!-- Data Pipeline Box -->
+                    <rect x="650" y="100" width="250" height="120" rx="10" fill="#2D1E29" stroke="#FF3366" stroke-width="2" />
+                    <text x="775" y="130" font-size="18" font-weight="bold" fill="#FF3366" text-anchor="middle">Data Pipeline</text>
+                    <text x="775" y="160" font-size="14" fill="#FFFFFF" text-anchor="middle">• Feature engineering</text>
+                    <text x="775" y="185" font-size="14" fill="#FFFFFF" text-anchor="middle">• Time series preprocessing</text>
+                    <text x="775" y="210" font-size="14" fill="#FFFFFF" text-anchor="middle">• Data validation</text>
+                    
+                    <!-- ML Training Box -->
+                    <rect x="650" y="300" width="250" height="120" rx="10" fill="#2D1E29" stroke="#FF3366" stroke-width="2" />
+                    <text x="775" y="330" font-size="18" font-weight="bold" fill="#FF3366" text-anchor="middle">ML Training</text>
+                    <text x="775" y="360" font-size="14" fill="#FFFFFF" text-anchor="middle">• LightGBM/XGBoost models</text>
+                    <text x="775" y="385" font-size="14" fill="#FFFFFF" text-anchor="middle">• MLflow experiment tracking</text>
+                    <text x="775" y="410" font-size="14" fill="#FFFFFF" text-anchor="middle">• Model versioning</text>
+                    
+                    <!-- FastAPI Backend Box -->
+                    <rect x="350" y="300" width="250" height="120" rx="10" fill="#2D1E29" stroke="#FF3366" stroke-width="2" />
+                    <text x="475" y="330" font-size="18" font-weight="bold" fill="#FF3366" text-anchor="middle">FastAPI Backend</text>
+                    <text x="475" y="360" font-size="14" fill="#FFFFFF" text-anchor="middle">• JWT authentication</text>
+                    <text x="475" y="385" font-size="14" fill="#FFFFFF" text-anchor="middle">• Real-time predictions</text>
+                    <text x="475" y="410" font-size="14" fill="#FFFFFF" text-anchor="middle">• Model explanations</text>
+                    
+                    <!-- Streamlit Dashboard Box -->
+                    <rect x="100" y="100" width="250" height="120" rx="10" fill="#2D1E29" stroke="#FF3366" stroke-width="2" />
+                    <text x="225" y="130" font-size="18" font-weight="bold" fill="#FF3366" text-anchor="middle">Streamlit Dashboard</text>
+                    <text x="225" y="160" font-size="14" fill="#FFFFFF" text-anchor="middle">• Sales visualization</text>
+                    <text x="225" y="185" font-size="14" fill="#FFFFFF" text-anchor="middle">• Forecast exploration</text>
+                    <text x="225" y="210" font-size="14" fill="#FFFFFF" text-anchor="middle">• Model performance metrics</text>
+                    
+                    <!-- Improvement Cycle in center -->
+                    <circle cx="475" cy="200" r="60" fill="rgba(255, 51, 102, 0.15)" stroke="#FF3366" stroke-width="2" />
+                    <text x="475" y="190" font-size="16" font-weight="bold" fill="#FF3366" text-anchor="middle">Continuous</text>
+                    <text x="475" y="210" font-size="16" font-weight="bold" fill="#FF3366" text-anchor="middle">Improvement</text>
+                    <text x="475" y="230" font-size="16" font-weight="bold" fill="#FF3366" text-anchor="middle">Cycle</text>
+                    
+                    <!-- Arrows -->
+                    <path d="M350 120 C 380 120, 435 120, 475 145" stroke="#FF3366" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+                    <path d="M535 200 C 565 200, 600 160, 650 160" stroke="#FF3366" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+                    <path d="M775 220 C 775 240, 775 270, 775 300" stroke="#FF3366" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+                    <path d="M650 360 C 600 360, 565 360, 600 360" stroke="#FF3366" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+                    <path d="M350 360 C 300 360, 225 260, 225 220" stroke="#FF3366" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+                    
+                    <!-- Arrow marker definition -->
+                    <defs>
+                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#FF3366" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Tech Stack Section -->
+    <section class="tech-stack" id="tech-stack">
+        <h2 class="tech-stack-title">Tech <span style="color: var(--primary-color);">Stack</span></h2>
+        <p class="tech-stack-subtitle">
+            This project showcases technical expertise across the full ML engineering stack
+        </p>
+        
+        <div class="tech-grid">
+            <div class="tech-item">
+                <div class="tech-icon">🐍</div>
+                <div class="tech-name">Python</div>
             </div>
             
-            <h1 class="animate">
-                Turn Sales Data into 
-                <span class="gradient-text">Strategic Insights</span>
-            </h1>
+            <div class="tech-item">
+                <div class="tech-icon">📊</div>
+                <div class="tech-name">Pandas</div>
+            </div>
             
-            <p class="animate animate-delay-1">
-                Advanced machine learning models to predict sales across 54 stores and 34 product families. Achieve 80.2% forecast accuracy with our enterprise-grade dashboard.
+            <div class="tech-item">
+                <div class="tech-icon">🧠</div>
+                <div class="tech-name">Scikit-learn</div>
+            </div>
+            
+            <div class="tech-item">
+                <div class="tech-icon">🔄</div>
+                <div class="tech-name">MLflow</div>
+            </div>
+            
+            <div class="tech-item">
+                <div class="tech-icon">⚡</div>
+                <div class="tech-name">FastAPI</div>
+            </div>
+            
+            <div class="tech-item">
+                <div class="tech-icon">📈</div>
+                <div class="tech-name">Streamlit</div>
+            </div>
+            
+            <div class="tech-item">
+                <div class="tech-icon">🛢️</div>
+                <div class="tech-name">SQLite</div>
+            </div>
+            
+            <div class="tech-item">
+                <div class="tech-icon">🔍</div>
+                <div class="tech-name">SHAP</div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- GitHub Project Section -->
+    <section class="github-section" style="padding: 4rem 5%; background-color: #0a0d12; margin: 2rem 0;">
+        <div style="max-width: 1000px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem; color: #fff;">
+                Retail <span style="color: #FF3366;">Analytics Pipeline</span>
+            </h2>
+            
+            <p style="color: var(--secondary-text); font-size: 1.1rem; margin-bottom: 2rem; max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.7;">
+                This project demonstrates a complete machine learning workflow for retail sales forecasting. Built with Python, FastAPI, and Streamlit, it showcases best practices in retail analytics including data preprocessing, time-series modeling, and interactive dashboards.
             </p>
             
-            <div class="stats-container animate animate-delay-2">
-                <div class="stat-card">
-                    <div class="stat-value">54</div>
-                    <div class="stat-label">Stores</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <div class="tech-card" style="background-color: var(--card-background); padding: 1.5rem; border-radius: 10px; text-align: left; border-left: 3px solid var(--primary-color);">
+                    <h3 style="color: var(--primary-color); margin-bottom: 0.8rem; font-size: 1.2rem;">ML Pipeline</h3>
+                    <p style="color: var(--secondary-text); font-size: 0.95rem;">End-to-end pipeline with DVC for data versioning, MLflow for experiment tracking, and automated model deployment.</p>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value">34</div>
-                    <div class="stat-label">Product Families</div>
+                
+                <div class="tech-card" style="background-color: var(--card-background); padding: 1.5rem; border-radius: 10px; text-align: left; border-left: 3px solid var(--primary-color);">
+                    <h3 style="color: var(--primary-color); margin-bottom: 0.8rem; font-size: 1.2rem;">Business Problem Solving</h3>
+                    <p style="color: var(--secondary-text); font-size: 0.95rem;">Addresses the $1.1 trillion inventory optimization challenge with actionable forecasts and inventory recommendations.</p>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value">$55.92</div>
-                    <div class="stat-label">Avg Sales</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">80.2%</div>
-                    <div class="stat-label">Forecast Accuracy</div>
+                
+                <div class="tech-card" style="background-color: var(--card-background); padding: 1.5rem; border-radius: 10px; text-align: left; border-left: 3px solid var(--primary-color);">
+                    <h3 style="color: var(--primary-color); margin-bottom: 0.8rem; font-size: 1.2rem;">Full Stack Implementation</h3>
+                    <p style="color: var(--secondary-text); font-size: 0.95rem;">Complete solution with FastAPI backend, Streamlit dashboard, and a modern React landing page with JWT authentication.</p>
                 </div>
             </div>
             
-            <div class="cta-container animate animate-delay-3">
-                <a href="http://localhost:8501" class="btn btn-primary btn-large">Access Dashboard</a>
-            </div>
-            
-            <div class="image-container animate animate-delay-3">
-                <img src="dashboard.png" alt="Dashboard Preview" class="dashboard-preview">
-            </div>
-        </section>
-        
-        <section class="feature-section">
-            <h2>Key Features</h2>
-            
-            <div class="features">
-                <div class="feature-card animate">
-                    <div class="feature-icon">📈</div>
-                    <h3 class="feature-title">Sales Predictions</h3>
-                    <p class="feature-description">Accurate forecasts for any store and product family combination with ML models.</p>
-                </div>
-                
-                <div class="feature-card animate animate-delay-1">
-                    <div class="feature-icon">🧩</div>
-                    <h3 class="feature-title">Feature Explanations</h3>
-                    <p class="feature-description">Understand what drives your sales with SHAP-based feature importance.</p>
-                </div>
-                
-                <div class="feature-card animate animate-delay-2">
-                    <div class="feature-icon">📊</div>
-                    <h3 class="feature-title">Historical Analysis</h3>
-                    <p class="feature-description">View past sales trends and patterns to inform business decisions.</p>
-                </div>
-                
-                <div class="feature-card animate animate-delay-3">
-                    <div class="feature-icon">🔍</div>
-                    <h3 class="feature-title">Store Comparison</h3>
-                    <p class="feature-description">Compare performance across multiple stores to identify opportunities.</p>
-                </div>
-            </div>
-        </section>
-    </main>
+            <a href="https://github.com/yourusername/retail-forecasting" target="_blank" class="cta-button" style="margin-bottom: 0.5rem;">
+                VIEW ON GITHUB
+            </a>
+            <a href="http://localhost:8501" target="_blank" class="cta-button" style="margin-bottom: 0.5rem; margin-left: 10px; background-color: #0a0d12; border: 1px solid #FF3366;">
+                OPEN DASHBOARD
+            </a>
+            <p style="color: var(--secondary-text); font-size: 0.9rem; margin-top: 1rem;">
+                Created as a portfolio project to demonstrate end-to-end machine learning implementation skills.
+            </p>
+        </div>
+    </section>
     
+    <!-- Footer -->
     <footer>
-        <p>&copy; 2025 Sales Forecasting Dashboard | A Data Science Project</p>
+        <div class="footer-links">
+            <a href="/" class="footer-link">Home</a>
+            <a href="#features" class="footer-link">Features</a>
+            <a href="#architecture" class="footer-link">Architecture</a>
+            <a href="#tech-stack" class="footer-link">Tech Stack</a>
+            <a href="http://localhost:8501" target="_blank" class="footer-link">Dashboard</a>
+            <a href="http://localhost:8888" target="_blank" class="footer-link">MLflow</a>
+            <a href="https://github.com/yourusername/retail-forecasting" class="footer-link">Repository</a>
+            <a href="https://linkedin.com/in/your-profile" class="footer-link">Contact</a>
+        </div>
+        <p class="footer-text">© 2025 Retail.AI Portfolio Project. Created for recruitment showcase.</p>
     </footer>
     
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeLoginModal()">&times;</span>
+            <h2 class="modal-title">Access Dashboard</h2>
+            
+            <p style="text-align: center; margin-bottom: 20px; color: var(--secondary-text);">
+                This is a retail analytics portfolio project. Use the demo credentials below to explore the dashboard.
+            </p>
+            
+            <div class="login-form">
+                <h2>Sign In</h2>
+                <div id="loginError" style="color: #ff3366; background: rgba(255, 51, 102, 0.1); border-radius: 4px; padding: 10px; margin-bottom: 15px; display: none;"></div>
+                <div id="loginSuccess" style="color: #4CAF50; background: rgba(76, 175, 80, 0.1); border-radius: 4px; padding: 10px; margin-bottom: 15px; display: none;"></div>
+                <form id="loginForm" action="/token" method="post">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    
+                    <button type="submit" class="login-button">Sign in</button>
+                </form>
+                
+                <div class="demo-credentials">
+                    <h4>Demo Credentials</h4>
+                    <p><strong>Username:</strong> johndoe</p>
+                    <p><strong>Password:</strong> secret</p>
+                    <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 0.5rem 0;">
+                    <p><strong>Username:</strong> admin</p>
+                    <p><strong>Password:</strong> admin</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        // Redirect to the Streamlit dashboard on button click
-        document.querySelectorAll('.btn-primary').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.location.href = 'http://localhost:8501';
-            });
-        });
+        // Modal functionality
+        function openLoginModal() {
+            document.getElementById("loginModal").style.display = "block";
+        }
         
-        // Add animation when elements come into view
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = 1;
-                    entry.target.style.transform = 'translateY(0)';
+        function closeLoginModal() {
+            document.getElementById("loginModal").style.display = "none";
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById("loginModal");
+            if (event.target == modal) {
+                closeLoginModal();
+            }
+        }
+        
+        // Form submission handler
+        document.getElementById("loginForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const username = formData.get("username");
+            const password = formData.get("password");
+            
+            try {
+                const response = await fetch("/token", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Store token in localStorage
+                    localStorage.setItem("token", data.access_token);
+                    localStorage.setItem("username", username);
+                    
+                    // Redirect directly to the Streamlit dashboard, passing the token and username
+                    // as query parameters for automatic login
+                    const dashboardUrl = "http://localhost:8501/?token=" + encodeURIComponent(data.access_token) + "&username=" + encodeURIComponent(username);
+                    console.log("Redirecting to dashboard with token: " + data.access_token.substring(0, 20) + "...");
+                    
+                    // Update UI to show success
+                    document.getElementById("loginError").style.display = "none";
+                    document.getElementById("loginSuccess").style.display = "block";
+                    document.getElementById("loginSuccess").textContent = "Login successful! Redirecting to dashboard...";
+                    
+                    // Redirect after a short delay
+                    setTimeout(() => {
+                        window.location.href = dashboardUrl;
+                    }, 500);
+                } else {
+                    document.getElementById("loginError").textContent = "Invalid credentials. Please try again.";
+                    document.getElementById("loginError").style.display = "block";
                 }
-            });
-        }, {
-            threshold: 0.1
+            } catch (error) {
+                console.error("Login error:", error);
+                document.getElementById("loginError").textContent = "An error occurred during login. Please try again.";
+                document.getElementById("loginError").style.display = "block";
+            }
         });
         
-        document.querySelectorAll('.feature-card').forEach(card => {
-            card.style.opacity = 0;
-            card.style.transform = 'translateY(20px)';
-            observer.observe(card);
+        // Animation on scroll
+        document.addEventListener("DOMContentLoaded", function() {
+            const animatedElements = document.querySelectorAll('.animated:not([style*="animation-delay"])');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = 1;
+                        entry.target.style.transform = 'translateY(0)';
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+            
+            animatedElements.forEach(el => {
+                el.style.opacity = 0;
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+                observer.observe(el);
+            });
         });
     </script>
 </body>

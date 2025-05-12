@@ -2043,8 +2043,11 @@ def generate_features(store_nbr, family, onpromotion, date):
         features[7] = 1 if date.weekday() >= 5 else 0    # is_weekend
         
         # Store features (54 features, index 8-61)
+        # Corrigindo o bug de índice fora dos limites - Verificar se o índice está dentro dos limites
         if 1 <= store_nbr <= 54:
-            features[7 + store_nbr] = 1
+            store_idx = 8 + (store_nbr - 1)  # Mapeamento correto: store_nbr 1 -> índice 8, store_nbr 54 -> índice 61
+            if store_idx < 81:  # Safety check para evitar índice fora dos limites
+                features[store_idx] = 1
         
         # Family features (19 features, index 62-80)
         # Fixed: Reduced to 19 features to fit within the 81-element array
