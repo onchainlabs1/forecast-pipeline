@@ -216,32 +216,32 @@ MIT
 
 Your Name - your.email@example.com
 
-## Executando com Landing Page Atrativa
+## Running with Attractive Landing Page
 
-Este projeto agora oferece uma landing page moderna e atrativa como porta de entrada para o dashboard de previsão de vendas. A landing page foi projetada com uma experiência de usuário semelhante a sites profissionais, incluindo animações, transições suaves e design moderno com tema escuro.
+This project now offers a modern and attractive landing page as the entry point to the sales forecasting dashboard. The landing page was designed with a user experience similar to professional websites, including animations, smooth transitions, and modern design with a dark theme.
 
-### Funcionalidades da Landing Page
+### Landing Page Features
 
-- **Design Moderno**: Interface com tema escuro, gradientes suaves e animações
-- **Apresentação Visual**: Exibe as principais métricas (54 lojas, 34 famílias de produtos, etc.)
-- **Integração Perfeita**: Conecta-se automaticamente ao dashboard Streamlit
-- **Experiência Profissional**: Proporciona uma primeira impressão impactante
+- **Modern Design**: Dark theme interface with smooth gradients and animations
+- **Visual Presentation**: Displays key metrics (54 stores, 34 product families, etc.)
+- **Seamless Integration**: Automatically connects to the Streamlit dashboard
+- **Professional Experience**: Provides an impactful first impression
 
-### Como Executar
+### How to Run
 
-Para iniciar o sistema completo com a landing page e o dashboard:
+To start the complete system with the landing page and dashboard:
 
 ```bash
 python run_with_landing.py
 ```
 
-Este comando irá:
-1. Iniciar o servidor da landing page em `http://localhost:8000`
-2. Iniciar automaticamente o dashboard Streamlit em `http://localhost:8501`
-3. Abrir o navegador na landing page
+This command will:
+1. Start the landing page server at `http://localhost:8000`
+2. Automatically start the Streamlit dashboard at `http://localhost:8501`
+3. Open the browser on the landing page
 
-A landing page oferece botões de "Login Dashboard" e "Access Dashboard" que redirecionam para o Streamlit, onde toda a funcionalidade principal de análise está disponível.
+The landing page offers "Login Dashboard" and "Access Dashboard" buttons that redirect to Streamlit, where all the main analysis functionality is available.
 
-### Capturas de Tela
+### Screenshots
 
-A landing page exibe informações sobre o projeto, incluindo o número de lojas (54), famílias de produtos (34), vendas médias ($55.92) e precisão de previsão (80.2%).
+The landing page displays information about the project, including the number of stores (54), product families (34), average sales ($55.92), and forecast accuracy (80.2%).
