@@ -530,23 +530,22 @@
                 <circle cx="22" cy="20" r="3" fill="#ffffff" />
             </svg>
         </a>
-        <div class="nav-links">
+        <div class="nav-links" style="display: flex; align-items: center; font-weight: 500;">
             <a href="#features" class="nav-link">Features</a>
+            <span style="color: var(--secondary-text); margin: 0 8px;">|</span>
             <a href="http://localhost:8501" target="_blank" class="nav-link">Dashboard</a>
+            <span style="color: var(--secondary-text); margin: 0 8px;">|</span>
             <a href="http://localhost:8888" target="_blank" class="nav-link">MLflow</a>
+            <span style="color: var(--secondary-text); margin: 0 8px;">|</span>
             <a href="https://github.com/onchainlabs1/forecast-pipeline/tree/feature/lovable-landing" class="nav-link" style="display: flex; align-items: center; gap: 5px;">
                 <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                     <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
                 </svg>
                 GitHub
             </a>
+            <span style="color: var(--secondary-text); margin: 0 8px;">|</span>
+            <a href="javascript:void(0)" onclick="openLoginModal()" class="nav-link">Login</a>
         </div>
-        <button class="remix-button" onclick="openLoginModal()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 4L20 20H4L12 4Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Login
-        </button>
     </nav>
     
     <!-- Hero Section -->
@@ -561,7 +560,7 @@
         </h1>
         
         <p class="hero-subtitle animated" style="animation-delay: 0.2s;">
-            AI-powered retail analytics to solve the $1.1 trillion inventory optimization problem. This portfolio project showcases a complete retail forecasting pipeline from POS data to actionable inventory insights.
+            A realistic AI-powered demo simulating a full-stack retail analytics product — from POS data to inventory recommendations. Built as a portfolio project to showcase real-world MLOps and forecasting capabilities.
         </p>
         
         <a href="http://localhost:8501" target="_blank" class="cta-button animated" style="animation-delay: 0.3s; text-decoration: none;">
@@ -629,18 +628,18 @@
             </h2>
             
             <p style="color: var(--secondary-text); font-size: 1.1rem; margin-bottom: 2rem; max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.7;">
-                This project demonstrates a complete machine learning workflow for retail sales forecasting. Built with Python, FastAPI, and Streamlit, it showcases best practices in retail analytics including data preprocessing, time-series modeling, and interactive dashboards.
+                This is a professional-grade portfolio project built to simulate a real-world retail AI solution — combining data engineering, time series modeling, model tracking, and interactive dashboards in one cohesive product experience.
             </p>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                 <div class="tech-card" style="background-color: var(--card-background); padding: 1.5rem; border-radius: 10px; text-align: left; border-left: 3px solid var(--primary-color);">
                     <h3 style="color: var(--primary-color); margin-bottom: 0.8rem; font-size: 1.2rem;">ML Pipeline</h3>
-                    <p style="color: var(--secondary-text); font-size: 0.95rem;">End-to-end pipeline with DVC for data versioning, MLflow for experiment tracking, and automated model deployment.</p>
+                    <p style="color: var(--secondary-text); font-size: 0.95rem;">End-to-end workflow using DVC for data versioning, MLflow for experiment tracking, and automated model deployment.</p>
                 </div>
                 
                 <div class="tech-card" style="background-color: var(--card-background); padding: 1.5rem; border-radius: 10px; text-align: left; border-left: 3px solid var(--primary-color);">
                     <h3 style="color: var(--primary-color); margin-bottom: 0.8rem; font-size: 1.2rem;">Business Problem Solving</h3>
-                    <p style="color: var(--secondary-text); font-size: 0.95rem;">Addresses the $1.1 trillion inventory optimization challenge with actionable forecasts and inventory recommendations.</p>
+                    <p style="color: var(--secondary-text); font-size: 0.95rem;">Simulates the $1.1 trillion inventory optimization challenge with actionable forecasts and inventory recommendations.</p>
                 </div>
                 
                 <div class="tech-card" style="background-color: var(--card-background); padding: 1.5rem; border-radius: 10px; text-align: left; border-left: 3px solid var(--primary-color);">
@@ -659,7 +658,7 @@
                 OPEN DASHBOARD
             </a>
             <p style="color: var(--secondary-text); font-size: 0.9rem; margin-top: 1rem;">
-                Created as a portfolio project to demonstrate end-to-end machine learning implementation skills.
+                This is a simulated use case created for portfolio purposes, designed to reflect real-world challenges and engineering practices in retail AI.
             </p>
         </div>
     </section>
@@ -680,6 +679,7 @@
             <a href="https://linkedin.com/in/your-profile" class="footer-link">Contact</a>
         </div>
         <p class="footer-text">© 2025 Retail.AI Portfolio Project. Created for recruitment showcase.</p>
+        <p class="footer-text" style="margin-top: 0.5rem;">This is a simulated retail use case created for educational and demonstration purposes.</p>
     </footer>
     
     <!-- Login Modal -->

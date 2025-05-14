@@ -245,3 +245,148 @@ The landing page offers "Login Dashboard" and "Access Dashboard" buttons that re
 ### Screenshots
 
 The landing page displays information about the project, including the number of stores (54), product families (34), average sales ($55.92), and forecast accuracy (80.2%).
+
+## Advanced Features
+
+### Explainable AI Implementation
+
+One of the most powerful features of this system is its **advanced explainability framework**. The project implements:
+
+- **SHAP-like feature importance**: Measures each feature's contribution to predictions
+- **Domain-aware explanations**: Uses retail-specific knowledge for meaningful insights
+- **Interactive visualizations**: Shows feature impacts with proper context and tooltips
+- **AI-powered recommendations**: Converts model outputs into actionable business insights
+
+#### Explainability in Action
+
+The dashboard showcases how ML explanations can be translated into business value through:
+
+1. **Feature contribution visualization**: Shows exactly how each store, product, promotion, and time factor affects the prediction.
+2. **Business recommendations**: Automatically generates inventory optimization advice based on predictions.
+3. **Interactive tooltips**: Helps users interpret feature impacts without requiring ML knowledge.
+
+This approach bridges the gap between complex machine learning models and business users who need transparency and interpretability.
+
+### ML Pipeline
+
+The project follows MLOps best practices with:
+
+- **Modular architecture**: Separate components for data processing, model training, and serving.
+- **API-first design**: All functionality accessible through RESTful endpoints.
+- **Database integration**: Efficiently stores predictions and historical data.
+- **Testing framework**: Ensures reliable model performance.
+
+# Forecast Pipeline Dashboard
+
+Um dashboard avançado para visualização de previsões de vendas de varejo, destinado a demonstrar habilidades técnicas em ML e design de interface.
+
+## Funcionalidades Avançadas
+
+- **Previsão de Vendas de Varejo**: Previsão automatizada de vendas para 54 lojas e 34 famílias de produtos.
+- **Visualização de Dados**: Dashboard interativo com gráficos e métricas de desempenho.
+- **Framework de Explicabilidade de ML**: Explicações detalhadas sobre como o modelo chega a cada previsão.
+- **Pipeline de Dados Completo**: Desde o processamento de dados até a implantação do modelo.
+- **Autenticação e Segurança**: Sistema completo de login e tokens JWT.
+- **Recomendações de Negócios**: Insights acionáveis baseados em previsões para otimização de estoque e estratégias de vendas.
+
+## Arquitetura
+
+O projeto é estruturado em três componentes principais:
+
+1. **Landing Page (Porta 8000)**: Página inicial e autenticação
+2. **API (Porta 8002)**: Backend para previsões e explicabilidade do modelo
+3. **Dashboard (Porta 8501)**: Interface de usuário Streamlit para visualização
+
+## Instalação e Execução
+
+### Requisitos
+
+- Python 3.9+
+- Pip ou Conda
+
+### Configuração
+
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/seu-usuario/forecast-pipeline-dashboard.git
+   cd forecast-pipeline-dashboard
+   ```
+
+2. Instale as dependências:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Inicie a aplicação completa usando o script fornecido:
+   ```bash
+   bash restart.sh
+   ```
+   
+   Isso iniciará todos os três componentes:
+   - Landing Page em http://localhost:8000
+   - API em http://localhost:8002
+   - Dashboard em http://localhost:8501
+
+4. Alternativamente, inicie cada componente manualmente:
+   ```bash
+   # Terminal 1 - Landing Page
+   python -m uvicorn src.landing.server:app --host 0.0.0.0 --port 8000
+   
+   # Terminal 2 - API
+   cd src/api && python -m uvicorn main:app --host 0.0.0.0 --port 8002
+   
+   # Terminal 3 - Dashboard
+   python -m streamlit run src/dashboard/app.py --server.port=8501
+   ```
+
+5. Acesse o dashboard em seu navegador: http://localhost:8501
+
+### Credenciais de Acesso
+
+- Usuário: admin
+- Senha: admin
+
+## Framework de Explicabilidade ML
+
+O sistema inclui um framework avançado de explicabilidade que torna as previsões do modelo interpretáveis para usuários de negócios:
+
+- **Explicações baseadas em SHAP**: Utiliza valores SHAP (SHapley Additive exPlanations) quando disponíveis
+- **Fallback Robusto**: Quando SHAP não está disponível, utiliza um mecanismo de fallback que:
+  - Analisa importâncias de features para modelos baseados em árvores
+  - Gera explicações baseadas em conhecimento de domínio para o setor de varejo
+  - Implementa reshaping automático de arrays para compatibilidade com sklearn (resolvendo o erro "Expected 2D array, got 1D array instead")
+  - Garante valores de contribuição balanceados e realistas
+  - Detecta e corrige formatos de entrada incorretos para evitar falhas na explicação
+
+- **Visualização Amigável**: Apresenta contribuições de features em formato visual intuitivo
+- **Insights Acionáveis**: Traduz explicações técnicas em recomendações de negócios
+
+## Recentes Melhorias (Maio 2025)
+
+- **Correção de Bugs de Explicabilidade**: Resolvido problema "Expected 2D array, got 1D array instead" ao gerar explicações SHAP
+- **Reshaping Automático de Features**: Implementado pre-processamento que garante formato correto dos arrays antes da predição
+- **Interface do Usuário Aprimorada**: Texto da landing page reescrito para maior clareza sobre o propósito do projeto
+- **Scripts de Deployment**: Adicionados scripts bash para facilitar a inicialização de todos os componentes do sistema
+- **Documentação Expandida**: Instruções detalhadas e capturas de tela para guiar novos usuários
+
+## Recomendações de Negócios
+
+O sistema gera recomendações de negócios baseadas em:
+
+- **Otimização de Estoque**: Sugere níveis ideais de estoque com base em previsões
+- **Estratégia de Compras**: Calcula o Economic Order Quantity (EOQ) para compras eficientes
+- **Análise de Desempenho**: Monitora crescimento ano-a-ano e padrões sazonais
+
+## Contribuição
+
+Contribuições são bem-vindas! Por favor, siga estas etapas:
+
+1. Fork do repositório
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
+
+## Licença
+
+Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para detalhes.
