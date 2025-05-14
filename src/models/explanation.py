@@ -32,7 +32,7 @@ MODELS_DIR = PROJECT_DIR / "models"
 REPORTS_DIR = PROJECT_DIR / "reports"
 SHAP_PLOTS_DIR = REPORTS_DIR / "shap_plots"
 
-# Criar uma classe de fallback para SHAP quando não está disponível
+# Create a fallback class for SHAP when not available
 class ShapFallback:
     """Fallback class when SHAP is not available."""
     
@@ -42,7 +42,7 @@ class ShapFallback:
     def __call__(self, *args, **kwargs):
         return []
 
-# Crie um namespace shap fictício com funcionalidade mínima
+# Create a mock shap namespace with minimal functionality
 class SHAPNamespace:
     def __init__(self):
         self.TreeExplainer = lambda *args, **kwargs: ShapFallback()
@@ -50,7 +50,7 @@ class SHAPNamespace:
     def summary_plot(self, *args, **kwargs):
         pass
         
-# Substitua o módulo shap por nossa implementação fictícia
+# Replace shap module with our mock implementation
 shap = SHAPNamespace()
 
 class ModelExplainer:

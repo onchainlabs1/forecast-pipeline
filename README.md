@@ -221,33 +221,33 @@ Dashboard highlights:
 - Real-time sales metrics and KPIs
 - Interactive store and product family selection
 - Historical sales trends visualization
-- Forecast accuracy tracking
+- Forecast explanations and insights
 
 ### Prediction Interface
-The prediction interface offers detailed sales forecasting:
+The prediction interface offers detailed forecasts with explanations:
 
 <div align="center">
   <img src="docs/images/predictions.png" alt="Predictions Interface" width="800"/>
 </div>
 
-Key prediction features:
-- Store-specific sales forecasting
-- Product family analysis
-- Promotion impact assessment
-- AI-powered recommendations
+Features:
+- Individual store and product predictions
+- Feature importance visualization
+- SHAP value explanations
+- Confidence intervals
 
-### Model Performance
-Track and analyze model performance metrics:
+### Performance Metrics
+Comprehensive performance tracking and model evaluation:
 
 <div align="center">
-  <img src="docs/images/performance.png" alt="Model Performance" width="800"/>
+  <img src="docs/images/performance.png" alt="Performance Metrics" width="800"/>
 </div>
 
-Performance monitoring features:
-- Real-time accuracy metrics
-- Model drift detection
-- Feature importance analysis
-- Performance comparison across stores
+Key metrics:
+- Forecast accuracy by store/product
+- Historical performance trends
+- Error analysis and distribution
+- Model comparison tools
 
 ## 📄 License
 
@@ -289,7 +289,7 @@ The landing page displays information about the project, including the number of
 
 ## Advanced Features
 
-### Explainable AI Implementation
+### Explainability Framework
 
 One of the most powerful features of this system is its **advanced explainability framework**. The project implements:
 
@@ -319,115 +319,156 @@ The project follows MLOps best practices with:
 
 # Forecast Pipeline Dashboard
 
-Um dashboard avançado para visualização de previsões de vendas de varejo, destinado a demonstrar habilidades técnicas em ML e design de interface.
+An advanced dashboard for retail sales forecasting visualization, designed to demonstrate technical skills in ML and interface design.
 
-## Funcionalidades Avançadas
+## Features
 
-- **Previsão de Vendas de Varejo**: Previsão automatizada de vendas para 54 lojas e 34 famílias de produtos.
-- **Visualização de Dados**: Dashboard interativo com gráficos e métricas de desempenho.
-- **Framework de Explicabilidade de ML**: Explicações detalhadas sobre como o modelo chega a cada previsão.
-- **Pipeline de Dados Completo**: Desde o processamento de dados até a implantação do modelo.
-- **Autenticação e Segurança**: Sistema completo de login e tokens JWT.
-- **Recomendações de Negócios**: Insights acionáveis baseados em previsões para otimização de estoque e estratégias de vendas.
+- **Retail Sales Forecasting**: Automated sales prediction for 54 stores and 34 product families.
+- **Data Visualization**: Interactive dashboard with performance graphs and metrics.
+- **ML Explainability Framework**: Detailed explanations of how the model arrives at each prediction.
+- **Complete Data Pipeline**: From data processing to model deployment.
+- **Authentication & Security**: Complete login system and JWT tokens.
+- **Business Recommendations**: Actionable insights based on predictions for inventory optimization and sales strategies.
 
-## Arquitetura
+## Architecture
 
-O projeto é estruturado em três componentes principais:
+The project is structured in three main components:
 
-1. **Landing Page (Porta 8000)**: Página inicial e autenticação
-2. **API (Porta 8002)**: Backend para previsões e explicabilidade do modelo
-3. **Dashboard (Porta 8501)**: Interface de usuário Streamlit para visualização
+1. **Landing Page (Port 8000)**: Homepage and authentication
+2. **API (Port 8002)**: Backend for predictions and model explainability
+3. **Dashboard (Port 8501)**: Streamlit user interface for visualization
 
-## Instalação e Execução
+## Installation & Running
 
-### Requisitos
+### Requirements
 
-- Python 3.9+
-- Pip ou Conda
+- Python 3.8+
+- pip
+- virtualenv (recommended)
 
-### Configuração
+### Setup
 
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/seu-usuario/forecast-pipeline-dashboard.git
-   cd forecast-pipeline-dashboard
-   ```
+1. Clone the repository:
+```bash
+git clone https://github.com/onchainlabs1/forecast-pipeline.git
+cd forecast-pipeline
+```
 
-2. Instale as dependências:
-   ```bash
-   pip install -r requirements.txt
-   ```
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-3. Inicie a aplicação completa usando o script fornecido:
-   ```bash
-   bash restart.sh
-   ```
-   
-   Isso iniciará todos os três componentes:
-   - Landing Page em http://localhost:8000
-   - API em http://localhost:8002
-   - Dashboard em http://localhost:8501
+3. Start the complete application using the provided script:
+```bash
+bash restart.sh
+```
 
-4. Alternativamente, inicie cada componente manualmente:
-   ```bash
-   # Terminal 1 - Landing Page
-   python -m uvicorn src.landing.server:app --host 0.0.0.0 --port 8000
-   
-   # Terminal 2 - API
-   cd src/api && python -m uvicorn main:app --host 0.0.0.0 --port 8002
-   
-   # Terminal 3 - Dashboard
-   python -m streamlit run src/dashboard/app.py --server.port=8501
-   ```
+This will start all three components:
+- Landing Page: http://localhost:8000
+- API: http://localhost:8002
+- Dashboard: http://localhost:8501
 
-5. Acesse o dashboard em seu navegador: http://localhost:8501
+## 📸 UI Showcase
 
-### Credenciais de Acesso
+### Landing Page
+The modern landing page introduces the project with a sleek dark theme design:
 
-- Usuário: admin
-- Senha: admin
+<div align="center">
+  <img src="docs/images/landing.png" alt="Landing Page" width="800"/>
+</div>
 
-## Framework de Explicabilidade ML
+Key features highlighted on the landing page:
+- Modern dark theme with professional design
+- Clear project description and value proposition
+- Quick access to dashboard and documentation
+- Real-time metrics display
 
-O sistema inclui um framework avançado de explicabilidade que torna as previsões do modelo interpretáveis para usuários de negócios:
+### Interactive Dashboard
+The main dashboard provides comprehensive sales analytics and forecasting:
 
-- **Explicações baseadas em SHAP**: Utiliza valores SHAP (SHapley Additive exPlanations) quando disponíveis
-- **Fallback Robusto**: Quando SHAP não está disponível, utiliza um mecanismo de fallback que:
-  - Analisa importâncias de features para modelos baseados em árvores
-  - Gera explicações baseadas em conhecimento de domínio para o setor de varejo
-  - Implementa reshaping automático de arrays para compatibilidade com sklearn (resolvendo o erro "Expected 2D array, got 1D array instead")
-  - Garante valores de contribuição balanceados e realistas
-  - Detecta e corrige formatos de entrada incorretos para evitar falhas na explicação
+<div align="center">
+  <img src="docs/images/dashboard_main.png" alt="Main Dashboard" width="800"/>
+</div>
 
-- **Visualização Amigável**: Apresenta contribuições de features em formato visual intuitivo
-- **Insights Acionáveis**: Traduz explicações técnicas em recomendações de negócios
+Dashboard highlights:
+- Real-time sales metrics and KPIs
+- Interactive store and product family selection
+- Historical sales trends visualization
+- Forecast explanations and insights
 
-## Recentes Melhorias (Maio 2025)
+### Prediction Interface
+The prediction interface offers detailed forecasts with explanations:
 
-- **Correção de Bugs de Explicabilidade**: Resolvido problema "Expected 2D array, got 1D array instead" ao gerar explicações SHAP
-- **Reshaping Automático de Features**: Implementado pre-processamento que garante formato correto dos arrays antes da predição
-- **Interface do Usuário Aprimorada**: Texto da landing page reescrito para maior clareza sobre o propósito do projeto
-- **Scripts de Deployment**: Adicionados scripts bash para facilitar a inicialização de todos os componentes do sistema
-- **Documentação Expandida**: Instruções detalhadas e capturas de tela para guiar novos usuários
+<div align="center">
+  <img src="docs/images/predictions.png" alt="Predictions Interface" width="800"/>
+</div>
 
-## Recomendações de Negócios
+Features:
+- Individual store and product predictions
+- Feature importance visualization
+- SHAP value explanations
+- Confidence intervals
 
-O sistema gera recomendações de negócios baseadas em:
+### Performance Metrics
+Comprehensive performance tracking and model evaluation:
 
-- **Otimização de Estoque**: Sugere níveis ideais de estoque com base em previsões
-- **Estratégia de Compras**: Calcula o Economic Order Quantity (EOQ) para compras eficientes
-- **Análise de Desempenho**: Monitora crescimento ano-a-ano e padrões sazonais
+<div align="center">
+  <img src="docs/images/performance.png" alt="Performance Metrics" width="800"/>
+</div>
 
-## Contribuição
+Key metrics:
+- Forecast accuracy by store/product
+- Historical performance trends
+- Error analysis and distribution
+- Model comparison tools
 
-Contribuições são bem-vindas! Por favor, siga estas etapas:
+## Default Credentials
 
-1. Fork do repositório
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abra um Pull Request
+- User: admin
+- Password: admin
 
-## Licença
+## Explainability Framework
 
-Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para detalhes.
+The system includes an advanced explainability framework that makes model predictions interpretable for business users:
+
+- **SHAP-based Explanations**: Uses SHAP (SHapley Additive exPlanations) values when available
+- **Robust Fallback**: When SHAP is unavailable, uses a fallback mechanism that:
+  - Analyzes feature importances for tree-based models
+  - Generates domain knowledge-based explanations for retail
+  - Implements automatic array reshaping for sklearn compatibility (fixing "Expected 2D array, got 1D array instead" error)
+  - Ensures balanced and realistic contribution values
+  - Detects and fixes incorrect input formats to prevent explanation failures
+
+- **User-Friendly Visualization**: Presents feature contributions in intuitive visual format
+- **Actionable Insights**: Translates technical explanations into business recommendations
+
+## Recent Updates
+
+- **Explainability Bug Fixes**: Resolved "Expected 2D array, got 1D array instead" issue when generating SHAP explanations
+- **Automatic Feature Reshaping**: Implemented preprocessing that ensures correct array format before prediction
+- **Enhanced User Interface**: Landing page text rewritten for better project purpose clarity
+- **Deployment Scripts**: Added bash scripts to facilitate starting all system components
+- **Expanded Documentation**: Detailed instructions and screenshots to guide new users
+
+## Business Recommendations
+
+The system generates business recommendations based on:
+
+- **Inventory Optimization**: Suggests ideal stock levels based on predictions
+- **Purchasing Strategy**: Calculates Economic Order Quantity (EOQ) for efficient purchasing
+- **Performance Analysis**: Monitors year-over-year growth and seasonal patterns
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
