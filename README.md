@@ -195,18 +195,59 @@ Or admin access:
 - **Username**: admin
 - **Password**: admin
 
-## 📸 Screenshots
+## 📸 UI Showcase
+
+### Landing Page
+The modern landing page introduces the project with a sleek dark theme design:
 
 <div align="center">
-  <p float="left">
-    <img src="reports/metrics_overview.png" width="400" />
-    <img src="reports/store_comparison.png" width="400" /> 
-  </p>
-  <p float="left">
-    <img src="reports/model_explanations.png" width="400" />
-    <img src="reports/mlflow_tracking.png" width="400" />
-  </p>
+  <img src="docs/images/landing.png" alt="Landing Page" width="800"/>
 </div>
+
+Key features highlighted on the landing page:
+- Modern dark theme with professional design
+- Clear project description and value proposition
+- Quick access to dashboard and documentation
+- Real-time metrics display
+
+### Interactive Dashboard
+The main dashboard provides comprehensive sales analytics and forecasting:
+
+<div align="center">
+  <img src="docs/images/dashboard_main.png" alt="Main Dashboard" width="800"/>
+</div>
+
+Dashboard highlights:
+- Real-time sales metrics and KPIs
+- Interactive store and product family selection
+- Historical sales trends visualization
+- Forecast accuracy tracking
+
+### Prediction Interface
+The prediction interface offers detailed sales forecasting:
+
+<div align="center">
+  <img src="docs/images/predictions.png" alt="Predictions Interface" width="800"/>
+</div>
+
+Key prediction features:
+- Store-specific sales forecasting
+- Product family analysis
+- Promotion impact assessment
+- AI-powered recommendations
+
+### Model Performance
+Track and analyze model performance metrics:
+
+<div align="center">
+  <img src="docs/images/performance.png" alt="Model Performance" width="800"/>
+</div>
+
+Performance monitoring features:
+- Real-time accuracy metrics
+- Model drift detection
+- Feature importance analysis
+- Performance comparison across stores
 
 ## 📄 License
 
