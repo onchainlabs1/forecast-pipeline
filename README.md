@@ -12,7 +12,7 @@
 </div>
 
 <p align="center">
-  <img src="reports/dashboard_screenshot.png" alt="RetailPro AI Dashboard" width="800"/>
+  <img src="docs/images/dashboard_main.png" alt="RetailPro AI Dashboard" width="800"/>
 </p>
 
 ## 🎯 Business Problem
@@ -87,7 +87,7 @@ Our platform delivers an end-to-end forecasting solution that:
 Our platform follows a modern microservices architecture with three main components:
 
 <p align="center">
-  <img src="reports/architecture_diagram.png" alt="System Architecture" width="700"/>
+  <img src="docs/images/architecture.png" alt="System Architecture" width="700"/>
 </p>
 
 ```
@@ -146,18 +146,20 @@ Our platform follows a modern microservices architecture with three main compone
 ```
 mlproject/
 ├── src/
-│   ├── api/              # FastAPI application for model serving
-│   ├── dashboard/        # Streamlit interface with visualizations
+│   ├── api/              # FastAPI application for model serving (port 8002)
+│   ├── dashboard/        # Streamlit interface with visualizations (port 8501)
+│   ├── landing/          # Landing page and authentication (port 8000)
 │   ├── database/         # Database models and connection utilities
 │   ├── features/         # Feature engineering pipeline
 │   ├── models/           # ML model definition, training and evaluation
 │   ├── security/         # Authentication and authorization
 │   └── utils/            # Shared utility functions
+├── docs/
+│   └── images/           # Documentation images and screenshots
 ├── models/               # Serialized model artifacts
 ├── tests/                # Automated test suite
-├── airflow/              # Airflow DAGs for scheduled tasks
 ├── monitoring/           # Monitoring and alerting components
-├── docker-compose.yml    # Docker configuration
+├── publish_github.sh     # Script for versioning and GitHub publishing
 └── requirements.txt      # Python dependencies
 ```
 
@@ -165,7 +167,7 @@ mlproject/
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mlproject.git
+git clone https://github.com/onchainlabs1/forecast-pipeline.git
 cd mlproject
 
 # Create virtual environment
@@ -175,15 +177,28 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Start MLflow tracking server
+# Start all services (on separate terminals)
+# 1. Landing page and authentication
+python -m uvicorn src.landing.server:app --host 0.0.0.0 --port 8000
+
+# 2. API server
+cd src/api && python -m uvicorn main:app --host 0.0.0.0 --port 8002
+
+# 3. MLflow tracking server (optional)
 mlflow ui --port 8888 --host 0.0.0.0
 
-# Run the API
-python -m src.api.main
-
-# In another terminal, start the dashboard
-streamlit run src/dashboard/app.py
+# 4. Streamlit dashboard
+python -m streamlit run src/dashboard/app.py --server.port=8501
 ```
+
+## 📱 Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Landing Page | 8000 | Project homepage and authentication |
+| API Server | 8002 | Backend for data and predictions |
+| Streamlit Dashboard | 8501 | Interactive visualization interface |
+| MLflow Server | 8888 | Model tracking and experiment management |
 
 ## 🔐 Authentication
 
@@ -248,6 +263,15 @@ Key metrics:
 - Historical performance trends
 - Error analysis and distribution
 - Model comparison tools
+
+## ⚠️ Demo Project Disclaimer
+
+This project is a demonstration/portfolio piece created to showcase technical skills and design capabilities. It simulates a retail forecasting system with sample data and is not connected to actual retail operations. While the models provide realistic predictions based on the simulated data, they are intended for demonstration purposes only.
+
+## 🚢 Deployment Information
+
+Current deployment branch: `feature/lovable-landing`
+Version: 1.0.0
 
 ## 🤝 Contributing
 
