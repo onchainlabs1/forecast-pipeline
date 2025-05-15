@@ -298,10 +298,17 @@ class ModelExplainer:
                 # For older SHAP versions
                 for i, feature in enumerate(self.feature_names):
                     contrib_dict[feature] = float(shap_values[0][i])
-            else:
-                # For newer SHAP versions
+            elif hasattr(shap_values, 'feature_names'):
+                # For newer SHAP versions with feature_names attribute
                 for i, feature in enumerate(shap_values.feature_names):
                     contrib_dict[feature] = float(shap_values.values[0][i])
+            else:
+                # For SHAP versions returning list-like objects without feature_names
+                for i, feature in enumerate(self.feature_names):
+                    if i < len(shap_values.values[0]):
+                        contrib_dict[feature] = float(shap_values.values[0][i])
+                    else:
+                        contrib_dict[feature] = 0.0
             
             # Sort by absolute value, descending
             contributions = [
@@ -613,6 +620,9 @@ def generate_explanation(model, instance, feature_names=None, background_data=No
     """
     if not PLOTTING_AVAILABLE:
         logger.warning("SHAP not available, explanation will be limited")
+        model = None
+        
+        # Create an explainer
         explainer = ModelExplainer(model, feature_names=feature_names)
         return explainer._generate_fallback_explanation(instance, feature_names)
         
@@ -632,5 +642,8 @@ def generate_explanation(model, instance, feature_names=None, background_data=No
     except Exception as e:
         logger.error(f"Error generating explanation: {e}")
         # Create fallback explanation
+        model = None
+        
+        # Create an explainer
         explainer = ModelExplainer(model, feature_names=feature_names)
         return explainer._generate_fallback_explanation(instance, feature_names) 

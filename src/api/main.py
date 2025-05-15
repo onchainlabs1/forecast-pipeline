@@ -832,14 +832,14 @@ async def explain_prediction(prediction_id: str,
         # Ensure we have a valid date
         try:
             if isinstance(date_str, str):
-                date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
             else:
                 # If somehow we have a datetime object already
                 date_obj = date_str
         except Exception as date_error:
             logging.error(f"Date parsing error: {date_error}")
             # Use current date as fallback
-            date_obj = datetime.datetime.now()
+            date_obj = datetime.now()
         
         # If we don't have a prediction value yet, generate one
         if prediction['predicted_sales'] == 0.0:
