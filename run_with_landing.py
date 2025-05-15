@@ -24,8 +24,8 @@ def run_landing_page():
 def open_landing_page():
     """Abre o navegador na landing page após um breve atraso"""
     time.sleep(2)  # Espera o servidor iniciar
-    webbrowser.open("http://localhost:8000")
-    print("Landing page aberta em http://localhost:8000")
+    webbrowser.open("http://localhost:8002")
+    print("Landing page aberta em http://localhost:8002")
 
 if __name__ == "__main__":
     # Iniciar a landing page (que também inicia o Streamlit)

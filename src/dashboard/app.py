@@ -38,7 +38,7 @@ import yaml
 import base64
 
 # URL do API
-API_URL = "http://localhost:8002"
+API_URL = "http://localhost:8000"
 # URL do landing page
 LANDING_URL = "http://localhost:8000"
 # URL do MLFlow

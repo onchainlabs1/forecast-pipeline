@@ -20,6 +20,8 @@ import joblib
 from fastapi import FastAPI, HTTPException, Query, Depends, Security, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import uvicorn
 from sqlalchemy.orm import Session
@@ -99,6 +101,12 @@ app.add_middleware(
     allow_methods=["*"],  # Permite todos os métodos
     allow_headers=["*"],  # Permite todos os cabeçalhos
 )
+
+# Montar diretório de templates
+templates_dir = Path(__file__).parent / "templates"
+static_dir = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+app.mount("/templates", StaticFiles(directory=str(templates_dir)), name="templates")
 
 # Pydantic models for request and response
 class StoreItem(BaseModel):
@@ -389,16 +397,25 @@ async def startup_event():
         # We'll retry loading the model on the first request
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
     """
-    Root endpoint that provides basic information about the API.
+    Serve a landing page HTML.
     """
-    return {
-        "message": "Store Sales Forecasting API",
-        "docs_url": "/docs",
-        "version": "1.0.0"
-    }
+    html_file = templates_dir / "index.html"
+    try:
+        with open(html_file, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"Error reading landing page: {e}")
+        return """
+        <html>
+            <body>
+                <h1>Welcome to Store Sales Forecasting API</h1>
+                <p>API is running. Visit <a href="/docs">documentation</a> for more information.</p>
+            </body>
+        </html>
+        """
 
 
 @app.get("/health")

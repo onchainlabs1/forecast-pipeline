@@ -12,7 +12,7 @@ import jwt
 from datetime import datetime, timedelta
 
 # Configurações do servidor
-PORT = 8000
+PORT = 8002
 STREAMLIT_PORT = 8501
 MLFLOW_PORT = 8888
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
