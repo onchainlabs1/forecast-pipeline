@@ -114,3 +114,111 @@ Our platform follows a modern microservices architecture with three main compone
                                                    │                │
                                                    └────────────────┘
 ```
+
+## 📝 Installation & Setup
+
+### Prerequisites
+- Python 3.9 or higher
+- Git
+
+### Setup Instructions
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/onchainlabs1/forecast-pipeline.git
+   cd forecast-pipeline
+   ```
+
+2. **Create a virtual environment**
+   ```bash
+   python -m venv venv
+   ```
+   
+3. **Activate the virtual environment**
+   - On Windows:
+     ```bash
+     venv\Scripts\activate
+     ```
+   - On macOS/Linux:
+     ```bash
+     source venv/bin/activate
+     ```
+
+4. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## 🚀 Running the Application
+
+### Option 1: All-in-One Startup
+
+Run everything with a single command:
+```bash
+python run_with_landing.py
+```
+
+This will start:
+- The FastAPI backend on port 8000
+- The Lovable landing page on port 8002
+- The Streamlit dashboard on port 8501
+
+### Option 2: Individual Component Startup
+
+Start each component separately:
+
+1. **API Server (Backend)**
+   ```bash
+   python src/api/main.py
+   ```
+   Access at: http://localhost:8000
+
+2. **Landing Page (Lovable)**
+   ```bash
+   python src/landing/server.py
+   ```
+   Access at: http://localhost:8002
+
+3. **Dashboard (Streamlit)**
+   ```bash
+   streamlit run src/dashboard/app.py
+   ```
+   Access at: http://localhost:8501
+
+## 🔐 Authentication
+
+Use the following credentials to log in:
+- **Username:** admin
+- **Password:** admin
+
+## 🧪 Testing
+
+Run the test suite:
+```bash
+pytest
+```
+
+## 📊 MLflow Integration
+
+View model metrics and experiments:
+```bash
+mlflow ui
+```
+Access the MLflow UI at: http://localhost:5000
+
+## 🌐 Airflow Integration (Optional)
+
+For automated model retraining and data pipeline orchestration:
+```bash
+cd airflow
+docker-compose up -d
+```
+Access the Airflow UI at: http://localhost:8080
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 📬 Contact
+
+For questions or support, contact: support@retailproai.com

@@ -27,10 +27,10 @@ import uvicorn
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct, and_
 
-# Verificar se o MLflow deve ser desabilitado
+# Check if MLflow should be disabled
 DISABLE_MLFLOW = os.getenv("DISABLE_MLFLOW", "false").lower() == "true"
 
-# Importação condicional do MLflow
+# Conditional import of MLflow
 if not DISABLE_MLFLOW:
     try:
         import mlflow
@@ -96,13 +96,13 @@ app = FastAPI(
 # Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todas as origens
+    allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos os métodos
-    allow_headers=["*"],  # Permite todos os cabeçalhos
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
-# Montar diretório de templates
+# Mount templates directory
 templates_dir = Path(__file__).parent / "templates"
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -143,7 +143,7 @@ class PredictionResponse(BaseModel):
     prediction_time: str
 
 
-# Adicionar modelos Pydantic extra para login simples
+# Additional Pydantic models for simple login
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -164,7 +164,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     - A JWT token if authentication is successful
     - 401 Unauthorized if authentication fails
     """
-    # Log para debug
+    # Log for debugging
     logger.info(f"Login attempt for user: {form_data.username}")
     
     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
@@ -180,7 +180,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     scopes = [scope for scope in form_data.scopes if scope in user.scopes]
     
-    # Se nenhum escopo for solicitado, usar todos os escopos do usuário
+    # If no scopes are requested, use all user scopes
     if not scopes:
         logger.info(f"No scopes requested, using all user scopes: {user.scopes}")
         scopes = user.scopes
@@ -194,7 +194,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-# Endpoint alternativo de login para o dashboard
+# Endpoint alternative for login for dashboard
 @app.post("/login", response_model=Token)
 async def login_simple(request: LoginRequest):
     """
@@ -1138,16 +1138,16 @@ async def get_metrics_summary(
                 # Calcular MAPE (Mean Absolute Percentage Error)
                 mape = (sum(point[3] for point in all_data_points) / count)
                 
-                # Calcular outras métricas para validação
+                # Calculate other metrics for validation
                 mae = total_abs_error / count
                 rmse = (total_squared_error / count) ** 0.5
                 mean_error = total_error / count
                 
-                # Converter MAPE para acurácia (100% - MAPE, limitado a 0)
+                # Convert MAPE to accuracy (100% - MAPE, limited to 0)
                 forecast_accuracy = max(0, 100 - mape)
                 accuracy_is_real = True
                 
-                # Log detalhado do cálculo
+                # Detailed calculation log
                 logger.info(f"Calculated real forecast accuracy from {count} data points:")
                 logger.info(f"  - MAPE: {mape:.2f}%")
                 logger.info(f"  - Accuracy (100-MAPE): {forecast_accuracy:.2f}%")
@@ -1155,7 +1155,7 @@ async def get_metrics_summary(
                 logger.info(f"  - RMSE: {rmse:.2f}")
                 logger.info(f"  - Mean Error: {mean_error:.2f}")
                 
-                # Registrar as primeiras 5 amostras como exemplos
+                # Log the first 5 samples as examples
                 log_samples = all_data_points[:5]
                 for i, (pred, actual, error, pct_error) in enumerate(log_samples):
                     logger.info(f"  - Sample {i+1}: Predicted={pred:.2f}, Actual={actual:.2f}, Error={error:.2f} ({pct_error:.2f}%)")

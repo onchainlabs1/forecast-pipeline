@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script para iniciar o sistema completo com landing page (lovable) e dashboard (Streamlit)
+Script to start the complete system with API, landing page (lovable) and dashboard (Streamlit)
 """
 
 import os
@@ -10,50 +10,71 @@ import time
 import webbrowser
 import threading
 
+def run_api_server():
+    """Runs the API server"""
+    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                              "src", "api", "main.py")
+    
+    print("Starting API server...")
+    api_process = subprocess.Popen([
+        sys.executable, script_path
+    ])
+    time.sleep(3)  # Wait for API to start
+    return api_process
+
 def run_landing_page():
-    """Executa o servidor da landing page"""
+    """Runs the landing page server"""
     script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
                               "src", "landing", "server.py")
     
-    print("Iniciando landing page...")
+    print("Starting landing page...")
     landing_process = subprocess.Popen([
         sys.executable, script_path
     ])
     return landing_process
 
-def open_landing_page():
-    """Abre o navegador na landing page após um breve atraso"""
-    time.sleep(2)  # Espera o servidor iniciar
+def run_streamlit():
+    """Runs the Streamlit dashboard"""
+    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                              "src", "dashboard", "app.py")
+    
+    print("Starting Streamlit dashboard...")
+    streamlit_process = subprocess.Popen([
+        "streamlit", "run", script_path
+    ])
+    return streamlit_process
+
+def open_pages():
+    """Opens browser windows for the different pages after a brief delay"""
+    time.sleep(5)  # Wait for servers to start
     webbrowser.open("http://localhost:8002")
-    print("Landing page aberta em http://localhost:8002")
+    print("Landing page opened at http://localhost:8002")
+    time.sleep(1)
+    webbrowser.open("http://localhost:8501")
+    print("Dashboard opened at http://localhost:8501")
 
 if __name__ == "__main__":
-    # Iniciar a landing page (que também inicia o Streamlit)
+    # Start the API
+    api_process = run_api_server()
+    
+    # Start the landing page
     landing_process = run_landing_page()
     
-    # Abrir o navegador
-    threading.Thread(target=open_landing_page).start()
+    # Start the Streamlit dashboard
+    streamlit_process = run_streamlit()
+    
+    # Open browsers
+    threading.Thread(target=open_pages).start()
     
     try:
-        # Manter o processo principal rodando
+        # Keep the main process running
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\nEncerrando aplicação...")
+        print("\nShutting down application...")
+        api_process.terminate()
         landing_process.terminate()
-        print("Landing page encerrada.")
-        
-        # Tentar encerrar o Streamlit também
-        try:
-            import signal
-            import psutil
-            
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-                if 'streamlit' in ' '.join(proc.info['cmdline'] or []):
-                    os.kill(proc.info['pid'], signal.SIGTERM)
-                    print(f"Processo Streamlit (PID: {proc.info['pid']}) encerrado.")
-        except Exception as e:
-            print(f"Aviso: Não foi possível encerrar o Streamlit automaticamente: {e}")
-            print("Você pode precisar encerrar o processo Streamlit manualmente.")
+        streamlit_process.terminate()
+        print("All processes terminated.")
         
         sys.exit(0) 

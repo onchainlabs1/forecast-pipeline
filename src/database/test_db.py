@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Script para testar as operações do banco de dados.
+Script to test database operations.
 """
 
 import sys
@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import random
 import numpy as np
 
-# Adiciona o diretório raiz ao path
+# Add root directory to path
 project_root = Path(__file__).parents[2]
 sys.path.insert(0, str(project_root))
 
@@ -27,7 +27,7 @@ from src.database.repository import (
     FeatureImportanceRepository
 )
 
-# Configuração de logging
+# Logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -36,19 +36,19 @@ logger = logging.getLogger(__name__)
 
 
 def test_add_prediction():
-    """Teste para adicionar uma previsão ao banco de dados."""
-    logger.info("Testando adição de previsão ao banco de dados")
+    """Test for adding a prediction to the database."""
+    logger.info("Testing addition of prediction to the database")
     
     with db_session() as session:
-        # Obter uma loja e família
+        # Get a store and family
         store = StoreRepository.get_by_store_nbr(session, 1)
         family = ProductFamilyRepository.get_by_name(session, "GROCERY I")
         
         if not store or not family:
-            logger.error("Loja ou família não encontrada")
+            logger.error("Store or family not found")
             return
         
-        # Criar dados de previsão
+        # Create prediction data
         prediction_date = datetime.now()
         target_date = prediction_date + timedelta(days=1)
         
@@ -65,23 +65,23 @@ def test_add_prediction():
             "feature_values": {"day_of_week": 2, "is_weekend": 0, "onpromotion": 0}
         }
         
-        # Salvar previsão
+        # Save prediction
         prediction = PredictionRepository.create(session, prediction_data)
-        logger.info(f"Previsão criada com ID: {prediction.id}")
+        logger.info(f"Prediction created with ID: {prediction.id}")
         
-        # Recuperar previsão
+        # Retrieve prediction
         saved_prediction = PredictionRepository.get_by_id(session, prediction.id)
-        logger.info(f"Previsão recuperada: {saved_prediction}")
+        logger.info(f"Retrieved prediction: {saved_prediction}")
         
         return saved_prediction.id
 
 
 def test_add_metrics():
-    """Teste para adicionar métricas de modelo ao banco de dados."""
-    logger.info("Testando adição de métricas ao banco de dados")
+    """Test for adding model metrics to the database."""
+    logger.info("Testing addition of metrics to the database")
     
     with db_session() as session:
-        # Criar dados de métricas
+        # Create metrics data
         metrics_data = [
             {
                 "model_name": "store-sales-forecaster",
@@ -113,25 +113,25 @@ def test_add_metrics():
             }
         ]
         
-        # Salvar métricas
+        # Save metrics
         metrics = ModelMetricRepository.create_many(session, metrics_data)
-        logger.info(f"Métricas criadas: {len(metrics)}")
+        logger.info(f"Metrics created: {len(metrics)}")
         
-        # Recuperar métricas
+        # Retrieve metrics
         latest_metrics = ModelMetricRepository.get_latest_metrics(
             session, "store-sales-forecaster"
         )
-        logger.info(f"Métricas recuperadas: {latest_metrics}")
+        logger.info(f"Retrieved metrics: {latest_metrics}")
         
         return latest_metrics
 
 
 def test_add_feature_importance():
-    """Teste para adicionar importância de atributos ao banco de dados."""
-    logger.info("Testando adição de importância de atributos ao banco de dados")
+    """Test for adding feature importance to the database."""
+    logger.info("Testing addition of feature importance to the database")
     
     with db_session() as session:
-        # Criar dados de importância de atributos
+        # Create feature importance data
         features = [
             "day_of_week", "month", "day_of_month", "onpromotion",
             "is_weekend", "is_month_start", "is_month_end",
@@ -141,12 +141,12 @@ def test_add_feature_importance():
         importance_data_list = []
         total_importance = 0
         
-        # Gerar valores aleatórios de importância
+        # Generate random importance values
         raw_values = [random.random() for _ in range(len(features))]
         total = sum(raw_values)
         normalized_values = [value / total for value in raw_values]
         
-        # Criar registros de importância
+        # Create importance records
         for i, feature in enumerate(features):
             importance_data_list.append({
                 "model_name": "store-sales-forecaster",
@@ -156,71 +156,71 @@ def test_add_feature_importance():
                 "timestamp": datetime.now()
             })
         
-        # Salvar importância de atributos
+        # Save feature importance
         importance_records = FeatureImportanceRepository.create_many(
             session, importance_data_list
         )
-        logger.info(f"Registros de importância criados: {len(importance_records)}")
+        logger.info(f"Feature importance records created: {len(importance_records)}")
         
-        # Recuperar importância de atributos
+        # Retrieve feature importance
         importance_df = FeatureImportanceRepository.get_feature_importance_as_dataframe(
             session, "store-sales-forecaster", "1.0.0"
         )
-        logger.info(f"Registros de importância recuperados: {len(importance_df)}")
+        logger.info(f"Feature importance records retrieved: {len(importance_df)}")
         
         return importance_df
 
 
 def test_query_historical_sales():
-    """Teste para consultar vendas históricas do banco de dados."""
-    logger.info("Testando consulta de vendas históricas do banco de dados")
+    """Test for querying historical sales from the database."""
+    logger.info("Testing query of historical sales from the database")
     
     with db_session() as session:
-        # Obter uma loja e família
+        # Get a store and family
         store = StoreRepository.get_by_store_nbr(session, 1)
         family = ProductFamilyRepository.get_by_name(session, "GROCERY I")
         
         if not store or not family:
-            logger.error("Loja ou família não encontrada")
+            logger.error("Store or family not found")
             return
         
-        # Consultar histórico de vendas
+        # Query sales history
         sales_df = HistoricalSalesRepository.get_sales_history_as_dataframe(
             session, store_id=store.id, family_id=family.id, days=30
         )
         
-        logger.info(f"Vendas históricas recuperadas: {len(sales_df)}")
+        logger.info(f"Historical sales retrieved: {len(sales_df)}")
         if not sales_df.empty:
-            logger.info(f"Primeiras linhas:\n{sales_df.head()}")
+            logger.info(f"First rows:\n{sales_df.head()}")
         
         return sales_df
 
 
 def test_add_more_historical_sales():
-    """Teste para adicionar mais vendas históricas ao banco de dados."""
-    logger.info("Testando adição de mais vendas históricas ao banco de dados")
+    """Test for adding more historical sales to the database."""
+    logger.info("Testing addition of more historical sales to the database")
     
     with db_session() as session:
-        # Obter lojas e famílias
+        # Get stores and families
         stores = StoreRepository.get_all(session)
         families = ProductFamilyRepository.get_all(session)
         
         if not stores or not families:
-            logger.error("Lojas ou famílias não encontradas")
+            logger.error("Stores or families not found")
             return
         
-        # Limitar para 5 lojas e 3 famílias para não criar dados demais
+        # Limit to 5 stores and 3 families to avoid creating too much data
         stores = stores[:5]
         families = families[:3]
         
-        # Gerar vendas históricas para os últimos 30 dias
+        # Generate historical sales for the last 30 days
         end_date = datetime.now().date()
         start_date = end_date - timedelta(days=30)
         
         total_records = 0
         
-        # Fatores de sazonalidade
-        day_of_week_factors = {0: 0.8, 1: 0.9, 2: 1.0, 3: 1.0, 4: 1.2, 5: 1.5, 6: 0.7}  # Seg-Dom
+        # Seasonality factors
+        day_of_week_factors = {0: 0.8, 1: 0.9, 2: 1.0, 3: 1.0, 4: 1.2, 5: 1.5, 6: 0.7}  # Mon-Sun
         
         for store in stores:
             for family in families:
@@ -230,30 +230,30 @@ def test_add_more_historical_sales():
                     current_date = end_date - timedelta(days=days_ago)
                     current_datetime = datetime.combine(current_date, datetime.min.time())
                     
-                    # Fator de dia da semana
+                    # Day factor
                     day_factor = day_of_week_factors[current_date.weekday()]
                     
-                    # Fator mensal (efeito sazonal)
+                    # Monthly factor (seasonal effect)
                     month_factor = 1.0 + 0.1 * np.sin(2 * np.pi * current_date.month / 12)
                     
-                    # Fator da loja (lojas diferentes têm volumes de vendas diferentes)
+                    # Store factor (stores with different volumes of sales have different factors)
                     store_factor = 0.5 + 1.5 * store.id / len(stores)
                     
-                    # Fator da família (produtos diferentes têm volumes de vendas diferentes)
+                    # Family factor (products with different volumes of sales have different factors)
                     family_factor = 0.5 + 1.5 * family.id / len(families)
                     
-                    # Promoção aleatória
+                    # Random promotion
                     onpromotion = random.random() < 0.2
                     promotion_factor = 1.3 if onpromotion else 1.0
                     
-                    # Vendas base com sazonalidade e fatores
+                    # Base sales with seasonal effect and factors
                     base_sales = 100 * day_factor * month_factor * store_factor * family_factor * promotion_factor
                     
-                    # Adicionar ruído aleatório
+                    # Add random noise
                     noise = random.uniform(0.8, 1.2)
                     sales = base_sales * noise
                     
-                    # Criar dados de vendas
+                    # Create sales data
                     sales_data = {
                         "store_id": store.id,
                         "family_id": family.id,
@@ -264,40 +264,40 @@ def test_add_more_historical_sales():
                     
                     sales_data_list.append(sales_data)
                 
-                # Inserir lote
+                # Insert batch
                 if sales_data_list:
                     HistoricalSalesRepository.create_many(session, sales_data_list)
                     total_records += len(sales_data_list)
-                    logger.info(f"Inseridos {len(sales_data_list)} registros históricos para loja {store.store_nbr}, família {family.name}")
+                    logger.info(f"Inserted {len(sales_data_list)} historical records for store {store.store_nbr}, family {family.name}")
         
-        logger.info(f"Total de registros históricos inseridos: {total_records}")
+        logger.info(f"Total historical records inserted: {total_records}")
         return total_records
 
 
 def test_add_future_predictions():
-    """Teste para adicionar previsões futuras ao banco de dados."""
-    logger.info("Testando adição de previsões futuras ao banco de dados")
+    """Test for adding future predictions to the database."""
+    logger.info("Testing addition of future predictions to the database")
     
     with db_session() as session:
-        # Obter lojas e famílias
+        # Get stores and families
         stores = StoreRepository.get_all(session)
         families = ProductFamilyRepository.get_all(session)
         
         if not stores or not families:
-            logger.error("Lojas ou famílias não encontradas")
+            logger.error("Stores or families not found")
             return
         
-        # Limitar para 5 lojas e 3 famílias para não criar dados demais
+        # Limit to 5 stores and 3 families to avoid creating too much data
         stores = stores[:5]
         families = families[:3]
         
-        # Gerar previsões para os próximos 14 dias
+        # Generate predictions for the next 14 days
         prediction_date = datetime.now()
         
         total_records = 0
         
-        # Fatores de sazonalidade
-        day_of_week_factors = {0: 0.8, 1: 0.9, 2: 1.0, 3: 1.0, 4: 1.2, 5: 1.5, 6: 0.7}  # Seg-Dom
+        # Seasonality factors
+        day_of_week_factors = {0: 0.8, 1: 0.9, 2: 1.0, 3: 1.0, 4: 1.2, 5: 1.5, 6: 0.7}  # Mon-Sun
         
         for store in stores:
             for family in families:
@@ -306,34 +306,34 @@ def test_add_future_predictions():
                 for days_ahead in range(1, 15):
                     target_date = prediction_date + timedelta(days=days_ahead)
                     
-                    # Fator de dia da semana
+                    # Day factor
                     day_factor = day_of_week_factors[target_date.weekday()]
                     
-                    # Fator mensal (efeito sazonal)
+                    # Monthly factor (seasonal effect)
                     month_factor = 1.0 + 0.1 * np.sin(2 * np.pi * target_date.month / 12)
                     
-                    # Fator da loja (lojas diferentes têm volumes de vendas diferentes)
+                    # Store factor (stores with different volumes of sales have different factors)
                     store_factor = 0.5 + 1.5 * store.id / len(stores)
                     
-                    # Fator da família (produtos diferentes têm volumes de vendas diferentes)
+                    # Family factor (products with different volumes of sales have different factors)
                     family_factor = 0.5 + 1.5 * family.id / len(families)
                     
-                    # Promoção aleatória
+                    # Random promotion
                     onpromotion = random.random() < 0.2
                     promotion_factor = 1.3 if onpromotion else 1.0
                     
-                    # Vendas base com sazonalidade e fatores
+                    # Base sales with seasonal effect and factors
                     base_sales = 100 * day_factor * month_factor * store_factor * family_factor * promotion_factor
                     
-                    # Adicionar ruído aleatório
+                    # Add random noise
                     noise = random.uniform(0.8, 1.2)
                     predicted_sales = base_sales * noise
                     
-                    # Calcular intervalos de previsão
+                    # Calculate prediction intervals
                     lower_bound = predicted_sales * 0.9
                     upper_bound = predicted_sales * 1.1
                     
-                    # Criar dados de previsão
+                    # Create prediction data
                     prediction_data = {
                         "store_id": store.id,
                         "family_id": family.id,
@@ -351,42 +351,42 @@ def test_add_future_predictions():
                         }
                     }
                     
-                    # Salvar previsão
+                    # Save prediction
                     prediction = PredictionRepository.create(session, prediction_data)
                     total_records += 1
                 
-                logger.info(f"Inseridas {days_ahead} previsões para loja {store.store_nbr}, família {family.name}")
+                logger.info(f"Inserted {days_ahead} predictions for store {store.store_nbr}, family {family.name}")
         
-        logger.info(f"Total de previsões inseridas: {total_records}")
+        logger.info(f"Total predictions inserted: {total_records}")
         return total_records
 
 
 if __name__ == "__main__":
-    """Executar testes de banco de dados."""
-    logger.info("Iniciando testes de banco de dados")
+    """Run database tests."""
+    logger.info("Starting database tests")
     
     try:
         prediction_id = test_add_prediction()
-        logger.info(f"Previsão criada com ID: {prediction_id}")
+        logger.info(f"Prediction created with ID: {prediction_id}")
         
         metrics = test_add_metrics()
-        logger.info(f"Métricas adicionadas: {metrics}")
+        logger.info(f"Metrics added: {metrics}")
         
         importance_df = test_add_feature_importance()
-        logger.info(f"Importância de atributos adicionada")
+        logger.info(f"Feature importance added")
         
-        # Adicionar mais testes
+        # Add more tests
         historical_count = test_add_more_historical_sales()
-        logger.info(f"Adicionados {historical_count} registros históricos de vendas")
+        logger.info(f"Inserted {historical_count} historical sales records")
         
         predictions_count = test_add_future_predictions()
-        logger.info(f"Adicionadas {predictions_count} previsões futuras")
+        logger.info(f"Inserted {predictions_count} future predictions")
         
         sales_df = test_query_historical_sales()
-        logger.info("Consulta de vendas históricas concluída")
+        logger.info("Historical sales query completed")
         
-        logger.info("Testes concluídos com sucesso")
+        logger.info("All tests completed successfully")
     
     except Exception as e:
-        logger.error(f"Erro durante os testes: {e}")
+        logger.error(f"Error during tests: {e}")
         sys.exit(1) 

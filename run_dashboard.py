@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Script para iniciar o dashboard Streamlit do projeto de previsão de vendas.
+Script to start the Streamlit dashboard for the sales forecasting project.
 """
 
 import os
@@ -11,47 +11,47 @@ import subprocess
 import time
 
 def main():
-    """Função principal para iniciar o dashboard."""
-    print("Iniciando o dashboard de previsão de vendas...")
+    """Main function to start the dashboard."""
+    print("Starting the sales forecasting dashboard...")
     
-    # Verifica se a API está rodando
+    # Check if the API is running
     api_running = False
     try:
-        # Tenta fazer uma requisição para a API
+        # Try to make a request to the API
         import requests
         response = requests.get("http://localhost:8000/health")
         if response.status_code == 200:
-            print("API já está rodando")
+            print("API is already running")
             api_running = True
     except:
         pass
     
-    # Inicia a API se não estiver rodando
+    # Start the API if not running
     api_process = None
     if not api_running:
-        print("Iniciando a API...")
+        print("Starting the API...")
         api_cmd = [sys.executable, "-m", "src.api.main"]
         api_process = subprocess.Popen(api_cmd)
-        print(f"API iniciada (PID: {api_process.pid})")
-        # Espera a API iniciar
-        print("Aguardando API iniciar...")
+        print(f"API started (PID: {api_process.pid})")
+        # Wait for the API to start
+        print("Waiting for API to start...")
         time.sleep(5)
     
-    # Inicia o dashboard
-    print("Iniciando o dashboard Streamlit...")
+    # Start the dashboard
+    print("Starting the Streamlit dashboard...")
     try:
-        # Tenta usar o módulo streamlit diretamente
+        # Try to use the streamlit module directly
         streamlit_cmd = [sys.executable, "-m", "streamlit", "run", "src/dashboard/app.py"]
         subprocess.run(streamlit_cmd)
     except Exception as e:
-        print(f"Erro ao iniciar o dashboard: {e}")
+        print(f"Error starting the dashboard: {e}")
     
-    # Encerra a API se iniciamos ela
+    # Terminate the API if we started it
     if api_process:
-        print("Encerrando a API...")
+        print("Terminating the API...")
         api_process.terminate()
         api_process.wait()
-        print("API encerrada.")
+        print("API terminated.")
 
 if __name__ == "__main__":
     main() 

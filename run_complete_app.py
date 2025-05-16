@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Script para iniciar a API e o dashboard do projeto de previsão de vendas.
-Este script verifica se a API está rodando, inicia-a se necessário, e depois inicia o dashboard.
+Script to start the API and dashboard for the sales forecasting project.
+This script checks if the API is running, starts it if necessary, and then starts the dashboard.
 """
 
 import os
@@ -15,14 +15,14 @@ import socket
 import requests
 from pathlib import Path
 
-# Configurar logging
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# Definir caminhos
+# Define paths
 PYTHON_PATH = "/Users/fabio/anaconda3/bin/python"
 API_PORT = 8000
 API_HOST = "localhost"
@@ -30,59 +30,59 @@ API_MODULE = "src.api.main"
 DASHBOARD_MODULE = "src.dashboard.app"
 
 def is_port_in_use(port, host='localhost'):
-    """Verifica se uma porta está em uso."""
+    """Checks if a port is in use."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex((host, port)) == 0
 
 def is_api_healthy():
-    """Verifica se a API está respondendo corretamente."""
+    """Checks if the API is responding correctly."""
     try:
         response = requests.get(f"http://{API_HOST}:{API_PORT}/health")
         return response.status_code == 200
     except Exception as e:
-        logger.error(f"Erro verificando API: {e}")
+        logger.error(f"Error checking API: {e}")
         return False
 
 def init_database():
-    """Inicializa o banco de dados se necessário."""
+    """Initializes the database if necessary."""
     db_path = Path("data/db/sales_forecasting.db")
     
     if db_path.exists():
-        logger.info("Banco de dados já existe. Pulando inicialização.")
+        logger.info("Database already exists. Skipping initialization.")
         return True
         
-    logger.info("Inicializando banco de dados...")
+    logger.info("Initializing database...")
     
-    # Criar diretórios necessários
+    # Create necessary directories
     os.makedirs("data/db", exist_ok=True)
     os.makedirs("data/raw", exist_ok=True)
     
     try:
-        # Execute o módulo de inicialização do banco de dados
+        # Execute the database initialization module
         subprocess.run(
             [PYTHON_PATH, "-m", "src.database.init_db"],
             check=True
         )
-        logger.info("Banco de dados inicializado com sucesso.")
+        logger.info("Database initialized successfully.")
         return True
     except subprocess.CalledProcessError as e:
-        logger.error(f"Erro ao inicializar banco de dados: {e}")
+        logger.error(f"Error initializing database: {e}")
         return False
 
 def start_api():
-    """Inicia a API em um processo separado."""
-    logger.info("Iniciando API...")
+    """Starts the API in a separate process."""
+    logger.info("Starting API...")
     
-    # Verifica se a API já está rodando
+    # Check if the API is already running
     if is_port_in_use(API_PORT):
         if is_api_healthy():
-            logger.info(f"API já está rodando em {API_HOST}:{API_PORT}")
+            logger.info(f"API is already running at {API_HOST}:{API_PORT}")
             return True
         else:
-            logger.warning("API está rodando, mas não está respondendo corretamente.")
+            logger.warning("API is running, but not responding correctly.")
             return False
     
-    # Inicia a API em um processo separado
+    # Start the API in a separate process
     try:
         api_process = subprocess.Popen(
             [PYTHON_PATH, "-m", API_MODULE],
@@ -91,56 +91,56 @@ def start_api():
             universal_newlines=True
         )
         
-        # Aguarda um tempo para a API iniciar
-        logger.info("Aguardando API iniciar...")
+        # Wait for the API to start
+        logger.info("Waiting for API to start...")
         for _ in range(10):
             time.sleep(1)
             if is_api_healthy():
-                logger.info("API iniciada com sucesso!")
+                logger.info("API started successfully!")
                 return True
                 
-        logger.error("Tempo limite excedido ao aguardar API iniciar.")
+        logger.error("Timeout exceeded while waiting for API to start.")
         return False
     except Exception as e:
-        logger.error(f"Erro ao iniciar API: {e}")
+        logger.error(f"Error starting API: {e}")
         return False
 
 def start_dashboard():
-    """Inicia o dashboard Streamlit."""
-    logger.info("Iniciando dashboard...")
+    """Starts the Streamlit dashboard."""
+    logger.info("Starting dashboard...")
     
     try:
-        # Inicia o dashboard (este processo bloqueia até o dashboard ser fechado)
+        # Start the dashboard (this process blocks until the dashboard is closed)
         subprocess.run(
             [PYTHON_PATH, "-m", "streamlit", "run", f"src/dashboard/app.py"],
             check=True
         )
-        logger.info("Dashboard encerrado.")
+        logger.info("Dashboard closed.")
         return True
     except subprocess.CalledProcessError as e:
-        logger.error(f"Erro ao executar dashboard: {e}")
+        logger.error(f"Error running dashboard: {e}")
         return False
     except KeyboardInterrupt:
-        logger.info("Dashboard interrompido pelo usuário.")
+        logger.info("Dashboard interrupted by user.")
         return True
 
 def main():
-    """Função principal."""
-    logger.info("Iniciando aplicação de previsão de vendas...")
+    """Main function."""
+    logger.info("Starting sales forecasting application...")
     
-    # Inicializar banco de dados
+    # Initialize database
     if not init_database():
-        logger.error("Falha ao inicializar banco de dados. Abortando.")
+        logger.error("Failed to initialize database. Aborting.")
         return 1
     
-    # Iniciar API
+    # Start API
     if not start_api():
-        logger.error("Falha ao iniciar API. Abortando.")
+        logger.error("Failed to start API. Aborting.")
         return 1
     
-    # Iniciar dashboard
+    # Start dashboard
     if not start_dashboard():
-        logger.error("Falha ao iniciar dashboard.")
+        logger.error("Failed to start dashboard.")
         return 1
     
     return 0

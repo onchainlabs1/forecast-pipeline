@@ -11,7 +11,7 @@ import time
 import jwt
 from datetime import datetime, timedelta
 
-# Configurações do servidor
+# Server configuration
 PORT = 8002
 STREAMLIT_PORT = 8501
 MLFLOW_PORT = 8888
@@ -21,7 +21,7 @@ ALGORITHM = "HS256"
 
 app = FastAPI()
 
-# Configurar CORS
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -58,7 +58,7 @@ async def login(username: str = Form(...), password: str = Form(...)):
         access_token = create_access_token(token_data)
         return {"access_token": access_token, "token_type": "bearer", "username": username}
     else:
-        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @app.get("/health")
 async def health_check():
