@@ -63,6 +63,10 @@ ENV/
 mlruns/
 logs/
 *.log
+token.json
+token_result.json
+api.pid
+*.bak
 
 # Data (managed by DVC, if used)
 data/*.csv

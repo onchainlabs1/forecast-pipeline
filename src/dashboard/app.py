@@ -37,12 +37,17 @@ import urllib.parse
 import yaml
 import base64
 
+# Configure ports via environment variables
+API_PORT = int(os.environ.get("API_PORT", 8000))
+LANDING_PORT = int(os.environ.get("LANDING_PORT", 8002))
+MLFLOW_PORT = int(os.environ.get("MLFLOW_PORT", 8888))
+
 # URL do API
-API_URL = "http://localhost:8000"
+API_URL = f"http://localhost:{API_PORT}"
 # URL do landing page
-LANDING_URL = "http://localhost:8000"
+LANDING_URL = f"http://localhost:{LANDING_PORT}"
 # URL do MLFlow
-MLFLOW_URL = "http://localhost:8888"
+MLFLOW_URL = f"http://localhost:{MLFLOW_PORT}"
 
 # Add project root to sys.path
 project_root = Path(__file__).parents[2]
@@ -1517,16 +1522,7 @@ def render_sidebar():
         """, unsafe_allow_html=True)
         
         # Links to other parts of the application
-        st.markdown("""
-        <div style="margin-bottom: 20px;">
-            <a href="http://localhost:8000" target="_blank" style="display: block; text-align: center; padding: 8px; background-color: rgba(255, 51, 102, 0.1); border-radius: 5px; color: #FF3366; text-decoration: none; margin-bottom: 10px;">
-                🏠 Landing Page
-            </a>
-            <a href="http://localhost:8888" target="_blank" style="display: block; text-align: center; padding: 8px; background-color: rgba(255, 51, 102, 0.1); border-radius: 5px; color: #FF3366; text-decoration: none;">
-                📈 MLflow UI
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(get_navigation_html(), unsafe_allow_html=True)
         
         # Auth section - Show login form if not authenticated
         if not st.session_state.get("authenticated", False):
@@ -1741,16 +1737,7 @@ def display_sales_history(store_nbr, family, days):
         st.error(f"Error displaying sales history: {str(e)}")
 
 def display_dashboard():
-    st.markdown("""
-    <div class="header-with-links">
-        <h2 class="header-title">Store Sales Forecast Dashboard</h2>
-        <div class="header-links">
-            <a href="http://localhost:8000" target="_blank" class="header-link">Landing Page</a>
-            <a href="http://localhost:8888" target="_blank" class="header-link">MLflow UI</a>
-            <a href="http://localhost:8002/docs" target="_blank" class="header-link">API Docs</a>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(get_header_html(), unsafe_allow_html=True)
     
     # Verify authentication before trying to load metrics
     if not st.session_state.get("token") or not st.session_state.authenticated:
@@ -2043,11 +2030,7 @@ def display_dashboard():
         st.error(f"Error loading store comparison: {str(e)}")
         
     # Add footer
-    st.markdown("""
-    <div class="footer">
-        <p>© 2025 Retail.AI - Sales Forecasting Dashboard | <a href="http://localhost:8000" target="_blank">Landing Page</a> | <a href="http://localhost:8888" target="_blank">MLflow UI</a> | <a href="http://localhost:8002/docs" target="_blank">API Docs</a></p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(get_forecast_footer(), unsafe_allow_html=True)
 
 def render_predictions():
     """
@@ -3168,11 +3151,45 @@ def render_data_explorer():
                 st.warning(f"No sales data available for {store_filter} - {family_filter}")
     
     # Add footer
-    st.markdown("""
-    <div class="footer">
-        <p>© 2025 Retail.AI - Data Explorer | <a href="http://localhost:8000" target="_blank">Landing Page</a> | <a href="http://localhost:8888" target="_blank">MLflow UI</a> | <a href="http://localhost:8002/docs" target="_blank">API Docs</a></p>
+    st.markdown(get_explorer_footer(), unsafe_allow_html=True)
+
+def get_navigation_html():
+    """Generate HTML for navigation links"""
+    return f"""
+    <div style="margin-bottom: 20px;">
+        <a href="{LANDING_URL}" target="_blank" style="display: block; text-align: center; padding: 8px; background-color: rgba(255, 51, 102, 0.1); border-radius: 5px; color: #FF3366; text-decoration: none; margin-bottom: 5px;">🏠 Landing Page</a>
+        <a href="{MLFLOW_URL}" target="_blank" style="display: block; text-align: center; padding: 8px; background-color: rgba(255, 51, 102, 0.1); border-radius: 5px; color: #FF3366; text-decoration: none; margin-bottom: 5px;">📊 MLflow UI</a>
     </div>
-    """, unsafe_allow_html=True)
+    """
+
+def get_header_html():
+    """Generate HTML for header with navigation"""
+    return f"""
+    <div class="header">
+        <h2 class="header-title">Store Sales Forecast Dashboard</h2>
+        <div class="header-links">
+            <a href="{LANDING_URL}" target="_blank" class="header-link">Landing Page</a>
+            <a href="{MLFLOW_URL}" target="_blank" class="header-link">MLflow UI</a>
+            <a href="{API_URL}/docs" target="_blank" class="header-link">API Docs</a>
+        </div>
+    </div>
+    """
+
+def get_forecast_footer():
+    """Generate HTML for the forecast page footer"""
+    return f"""
+    <div class="footer">
+        <p>© 2025 Retail.AI - Sales Forecasting Dashboard | <a href="{LANDING_URL}" target="_blank">Landing Page</a> | <a href="{MLFLOW_URL}" target="_blank">MLflow UI</a> | <a href="{API_URL}/docs" target="_blank">API Docs</a></p>
+    </div>
+    """
+
+def get_explorer_footer():
+    """Generate HTML for the data explorer footer"""
+    return f"""
+    <div class="footer">
+        <p>© 2025 Retail.AI - Data Explorer | <a href="{LANDING_URL}" target="_blank">Landing Page</a> | <a href="{MLFLOW_URL}" target="_blank">MLflow UI</a> | <a href="{API_URL}/docs" target="_blank">API Docs</a></p>
+    </div>
+    """
 
 def main():
     """

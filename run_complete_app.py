@@ -22,10 +22,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Define paths
-PYTHON_PATH = "/Users/fabio/anaconda3/bin/python"
-API_PORT = 8000
-API_HOST = "localhost"
+# Define paths and ports
+PYTHON_PATH = os.environ.get("PYTHON_PATH", "python")  # Use system python by default or from env var
+API_PORT = int(os.environ.get("API_PORT", 8000))
+API_HOST = os.environ.get("API_HOST", "localhost")
 API_MODULE = "src.api.main"
 DASHBOARD_MODULE = "src.dashboard.app"
 

@@ -10,18 +10,22 @@ import sys
 import subprocess
 import time
 
+# Configure ports from environment variables
+API_PORT = int(os.environ.get("API_PORT", 8000))
+DASHBOARD_PORT = int(os.environ.get("DASHBOARD_PORT", 8501))
+
 def main():
     """Main function to start the dashboard."""
-    print("Starting the sales forecasting dashboard...")
+    print(f"Starting the sales forecasting dashboard on port {DASHBOARD_PORT}...")
     
     # Check if the API is running
     api_running = False
     try:
         # Try to make a request to the API
         import requests
-        response = requests.get("http://localhost:8000/health")
+        response = requests.get(f"http://localhost:{API_PORT}/health")
         if response.status_code == 200:
-            print("API is already running")
+            print(f"API is already running on port {API_PORT}")
             api_running = True
     except:
         pass
@@ -29,19 +33,21 @@ def main():
     # Start the API if not running
     api_process = None
     if not api_running:
-        print("Starting the API...")
+        print(f"Starting the API on port {API_PORT}...")
         api_cmd = [sys.executable, "-m", "src.api.main"]
-        api_process = subprocess.Popen(api_cmd)
+        api_env = os.environ.copy()
+        api_env["PORT"] = str(API_PORT)
+        api_process = subprocess.Popen(api_cmd, env=api_env)
         print(f"API started (PID: {api_process.pid})")
         # Wait for the API to start
         print("Waiting for API to start...")
         time.sleep(5)
     
     # Start the dashboard
-    print("Starting the Streamlit dashboard...")
+    print(f"Starting the Streamlit dashboard on port {DASHBOARD_PORT}...")
     try:
         # Try to use the streamlit module directly
-        streamlit_cmd = [sys.executable, "-m", "streamlit", "run", "src/dashboard/app.py"]
+        streamlit_cmd = [sys.executable, "-m", "streamlit", "run", "src/dashboard/app.py", "--server.port", str(DASHBOARD_PORT)]
         subprocess.run(streamlit_cmd)
     except Exception as e:
         print(f"Error starting the dashboard: {e}")

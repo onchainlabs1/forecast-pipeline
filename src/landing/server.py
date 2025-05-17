@@ -12,11 +12,12 @@ import jwt
 from datetime import datetime, timedelta
 
 # Server configuration
-PORT = 8002
-STREAMLIT_PORT = 8501
-MLFLOW_PORT = 8888
+PORT = int(os.environ.get("PORT", 8002))
+API_PORT = int(os.environ.get("API_PORT", 8000))
+STREAMLIT_PORT = int(os.environ.get("DASHBOARD_PORT", 8501))
+MLFLOW_PORT = int(os.environ.get("MLFLOW_PORT", 8888))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-SECRET_KEY = "your-secret-key-here"
+SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = "HS256"
 
 app = FastAPI()

@@ -1,86 +1,92 @@
 #!/bin/bash
 
-echo "=== Forecast Pipeline Dashboard - Script de Inicialização ==="
-echo "Este script irá iniciar todos os serviços necessários para a aplicação."
+echo "=== Forecast Pipeline Dashboard - Startup Script ==="
+echo "This script will start all necessary services for the application."
 
-# Diretório base do projeto
-BASE_DIR="/Users/fabio/Desktop/mlproject"
-PYTHON="/Users/fabio/anaconda3/bin/python"
+# Project base directory (current directory)
+BASE_DIR="$(pwd)"
+# Use python from PATH or override with PYTHON_PATH env var
+PYTHON=${PYTHON_PATH:-python}
 
-# Matar processos existentes (se houver)
-echo "Terminando processos existentes..."
-pkill -f "uvicorn src.landing" || echo "Nenhum processo de landing page em execução"
-pkill -f "uvicorn main:app" || echo "Nenhum processo de API em execução"
-pkill -f "uvicorn src.api.main:app" || echo "Nenhum processo de API em execução"
-pkill -f "streamlit run" || echo "Nenhum processo de Dashboard em execução"
+# API port configuration
+API_PORT=${API_PORT:-8000}
+LANDING_PORT=${LANDING_PORT:-8002}
+DASHBOARD_PORT=${DASHBOARD_PORT:-8501}
 
-# Esperar um pouco para garantir que os processos foram encerrados
-echo "Aguardando finalização completa dos processos..."
+# Kill existing processes (if any)
+echo "Terminating existing processes..."
+pkill -f "uvicorn src.landing" || echo "No landing page process running"
+pkill -f "uvicorn main:app" || echo "No API process running"
+pkill -f "uvicorn src.api.main:app" || echo "No API process running"
+pkill -f "streamlit run" || echo "No Dashboard process running"
+
+# Wait a bit to ensure processes have terminated
+echo "Waiting for complete process termination..."
 sleep 3
 
-# Verificar portas em uso
-echo "Verificando portas em uso..."
-if lsof -i:8000 > /dev/null 2>&1; then
-  echo "AVISO: Porta 8000 já está em uso. A landing page pode não iniciar corretamente."
+# Check for ports in use
+echo "Checking ports in use..."
+if lsof -i:$API_PORT > /dev/null 2>&1; then
+  echo "WARNING: Port $API_PORT is already in use. The API may not start correctly."
 fi
 
-if lsof -i:8002 > /dev/null 2>&1; then
-  echo "AVISO: Porta 8002 já está em uso. A API pode não iniciar corretamente."
+if lsof -i:$LANDING_PORT > /dev/null 2>&1; then
+  echo "WARNING: Port $LANDING_PORT is already in use. The landing page may not start correctly."
 fi
 
-if lsof -i:8501 > /dev/null 2>&1; then
-  echo "AVISO: Porta 8501 já está em uso. O Dashboard pode não iniciar corretamente."
+if lsof -i:$DASHBOARD_PORT > /dev/null 2>&1; then
+  echo "WARNING: Port $DASHBOARD_PORT is already in use. The Dashboard may not start correctly."
 fi
 
-# Iniciar landing page em background
-echo "Iniciando Landing Page (http://localhost:8000)..."
-cd "$BASE_DIR" && $PYTHON -m uvicorn src.landing.server:app --host 0.0.0.0 --port 8000 > logs/landing.log 2>&1 &
-LANDING_PID=$!
-echo "Landing Page iniciada com PID $LANDING_PID"
-
-# Aguardar inicialização da landing page
-echo "Aguardando inicialização da landing page..."
-sleep 5
-
-# Iniciar API em background
-echo "Iniciando API (http://localhost:8002)..."
-cd "$BASE_DIR/src/api" && $PYTHON -m uvicorn main:app --host 0.0.0.0 --port 8002 > ../../logs/api.log 2>&1 &
-API_PID=$!
-echo "API iniciada com PID $API_PID"
-
-# Aguardar inicialização da API
-echo "Aguardando inicialização da API..."
-sleep 5
-
-# Iniciar dashboard em background
-echo "Iniciando Dashboard (http://localhost:8501)..."
-cd "$BASE_DIR" && $PYTHON -m streamlit run src/dashboard/app.py --server.port=8501 > logs/dashboard.log 2>&1 &
-DASHBOARD_PID=$!
-echo "Dashboard iniciado com PID $DASHBOARD_PID"
-
-# Criar diretório de logs se não existir
+# Create logs directory if it doesn't exist
 mkdir -p "$BASE_DIR/logs"
 
-# Mostrar informações finais
-echo ""
-echo "=== Todos os serviços iniciados ==="
-echo "Landing Page: http://localhost:8000"
-echo "API: http://localhost:8002"
-echo "Dashboard: http://localhost:8501"
-echo ""
-echo "Credenciais de acesso:"
-echo "Usuário: admin"
-echo "Senha: admin"
-echo ""
-echo "Para encerrar todos os serviços, execute: bash $BASE_DIR/restart.sh stop"
-echo "Os logs estão disponíveis no diretório: $BASE_DIR/logs/"
+# Start API in background
+echo "Starting API (http://localhost:$API_PORT)..."
+cd "$BASE_DIR" && $PYTHON -m uvicorn src.api.main:app --host 0.0.0.0 --port $API_PORT > logs/api.log 2>&1 &
+API_PID=$!
+echo "API started with PID $API_PID"
 
-# Opção para parar todos os serviços
+# Wait for API to initialize
+echo "Waiting for API initialization..."
+sleep 5
+
+# Start landing page in background
+echo "Starting Landing Page (http://localhost:$LANDING_PORT)..."
+cd "$BASE_DIR" && PORT=$LANDING_PORT $PYTHON -m uvicorn src.landing.server:app --host 0.0.0.0 --port $LANDING_PORT > logs/landing.log 2>&1 &
+LANDING_PID=$!
+echo "Landing Page started with PID $LANDING_PID"
+
+# Wait for landing page to initialize
+echo "Waiting for landing page initialization..."
+sleep 3
+
+# Start dashboard in background
+echo "Starting Dashboard (http://localhost:$DASHBOARD_PORT)..."
+cd "$BASE_DIR" && $PYTHON -m streamlit run src/dashboard/app.py --server.port=$DASHBOARD_PORT > logs/dashboard.log 2>&1 &
+DASHBOARD_PID=$!
+echo "Dashboard started with PID $DASHBOARD_PID"
+
+# Show final information
+echo ""
+echo "=== All services started ==="
+echo "API: http://localhost:$API_PORT"
+echo "Landing Page: http://localhost:$LANDING_PORT"
+echo "Dashboard: http://localhost:$DASHBOARD_PORT"
+echo ""
+echo "Access credentials:"
+echo "Username: admin"
+echo "Password: admin"
+echo ""
+echo "To terminate all services, run: bash $BASE_DIR/restart.sh stop"
+echo "Logs are available in the directory: $BASE_DIR/logs/"
+
+# Option to stop all services
 if [ "$1" = "stop" ]; then
-  echo "Encerrando todos os serviços..."
-  pkill -f "uvicorn src.landing" || echo "Nenhum processo de landing page em execução"
-  pkill -f "uvicorn main:app" || echo "Nenhum processo de API em execução" 
-  pkill -f "uvicorn src.api.main:app" || echo "Nenhum processo de API em execução"
-  pkill -f "streamlit run" || echo "Nenhum processo de Dashboard em execução"
-  echo "Todos os serviços encerrados."
+  echo "Shutting down all services..."
+  pkill -f "uvicorn src.landing" || echo "No landing page process running"
+  pkill -f "uvicorn main:app" || echo "No API process running" 
+  pkill -f "uvicorn src.api.main:app" || echo "No API process running"
+  pkill -f "streamlit run" || echo "No Dashboard process running"
+  echo "All services terminated."
 fi 

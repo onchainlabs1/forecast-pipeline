@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Script para executar apenas o dashboard Streamlit
-echo "Iniciando o dashboard com Streamlit..."
+# Script to run the Streamlit dashboard directly
 
-# Caminho para o Python do Anaconda
-PYTHON_PATH="/Users/fabio/anaconda3/bin/python"
+# Use environment variable or default to "python"
+PYTHON_PATH=${PYTHON_PATH:-python}
 
-# Execute o dashboard diretamente
-$PYTHON_PATH -m streamlit run src/dashboard/app.py
+# Run Streamlit
+echo "Starting Streamlit dashboard..."
+$PYTHON_PATH -m streamlit run src/dashboard/app.py "$@"
 
-echo "Dashboard encerrado." 
+echo "Dashboard closed." 

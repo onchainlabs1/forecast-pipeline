@@ -5,16 +5,40 @@
 echo "Starting Sales Forecasting App with Database Support"
 echo "===================================================="
 
-# Check if the database has been initialized
-if [ ! -f "data/db/sales_forecasting.db" ]; then
-    echo "Database not found. Initializing database..."
-    ./init_database.sh
+# Function to initialize the database if it doesn't exist
+init_database() {
+    echo "Checking if database initialization is required..."
     
-    if [ $? -ne 0 ]; then
-        echo "Error: Database initialization failed. Exiting."
-        exit 1
+    if [ -f "data/db/sales_forecasting.db" ]; then
+        echo "Database already exists, skipping initialization."
+        return 0
     fi
-fi
+    
+    echo "Database does not exist, initializing..."
+    
+    # Create necessary directories
+    mkdir -p data/db
+    mkdir -p data/raw
+    
+    # Initialize the database
+    echo "Running database initialization..."
+    
+    # Use environment variable or default to "python"
+    PYTHON_PATH=${PYTHON_PATH:-python}
+    
+    $PYTHON_PATH -m src.database.init_db
+    
+    if [ $? -eq 0 ]; then
+        echo "Database initialized successfully."
+        return 0
+    else
+        echo "Failed to initialize database."
+        return 1
+    fi
+}
+
+# Initialize the database
+init_database
 
 # Use the full path to Python from Anaconda
 PYTHON_PATH="/Users/fabio/anaconda3/bin/python"

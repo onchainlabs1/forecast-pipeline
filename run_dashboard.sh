@@ -2,8 +2,8 @@
 
 # Script to run both the API and dashboard
 
-# Use the full path to Python from Anaconda
-PYTHON_PATH="/Users/fabio/anaconda3/bin/python"
+# Use environment variable or default to "python"
+PYTHON_PATH=${PYTHON_PATH:-python}
 
 # Start the API in the background
 echo "Starting the API server..."
@@ -16,7 +16,7 @@ sleep 5
 
 # Start the dashboard - usando o comando correto para o streamlit
 echo "Starting the dashboard..."
-$PYTHON_PATH -c "import streamlit.web.cli as stcli; stcli.main()" src/dashboard/app.py
+$PYTHON_PATH -m streamlit run src/dashboard/app.py --server.port 8501
 
 # When the dashboard is closed, kill the API
 echo "Dashboard closed, stopping API server..."
