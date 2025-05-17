@@ -3,6 +3,7 @@
 
 import requests
 import json
+import os
 
 def print_json(data):
     """Print JSON data in a readable format."""
@@ -31,7 +32,10 @@ def main():
     print("Testing the Sales Forecasting API...")
     print("-----------------------------------------")
     
-    base_url = "http://localhost:8000"
+    # Use API_PORT from environment or default to 8000
+    api_port = os.environ.get("API_PORT", "8000")
+    base_url = f"http://localhost:{api_port}"
+    print(f"Using API at {base_url}")
     
     # Get token
     token = get_token(base_url)

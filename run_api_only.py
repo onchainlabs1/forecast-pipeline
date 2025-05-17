@@ -21,6 +21,13 @@ logger = logging.getLogger(__name__)
 def main():
     """Função principal para iniciar a API."""
     try:
+        # Get API port from environment variable or use default
+        api_port = os.environ.get("API_PORT", "8000")
+        logger.info(f"Starting API on port {api_port}")
+        
+        # Set environment variable for the API to use
+        os.environ["API_PORT"] = api_port
+        
         logger.info("Tentando importar e iniciar a API...")
         
         # Importa dinamicamente o módulo da API

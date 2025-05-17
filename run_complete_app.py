@@ -28,6 +28,7 @@ API_PORT = int(os.environ.get("API_PORT", 8000))
 API_HOST = os.environ.get("API_HOST", "localhost")
 API_MODULE = "src.api.main"
 DASHBOARD_MODULE = "src.dashboard.app"
+DASHBOARD_PORT = int(os.environ.get("DASHBOARD_PORT", 8501))
 
 def is_port_in_use(port, host='localhost'):
     """Checks if a port is in use."""
@@ -71,7 +72,7 @@ def init_database():
 
 def start_api():
     """Starts the API in a separate process."""
-    logger.info("Starting API...")
+    logger.info(f"Starting API on port {API_PORT}...")
     
     # Check if the API is already running
     if is_port_in_use(API_PORT):
@@ -84,11 +85,16 @@ def start_api():
     
     # Start the API in a separate process
     try:
+        # Pass port configuration as environment variables
+        env = os.environ.copy()
+        env["API_PORT"] = str(API_PORT)
+        
         api_process = subprocess.Popen(
             [PYTHON_PATH, "-m", API_MODULE],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True
+            universal_newlines=True,
+            env=env
         )
         
         # Wait for the API to start
@@ -107,13 +113,18 @@ def start_api():
 
 def start_dashboard():
     """Starts the Streamlit dashboard."""
-    logger.info("Starting dashboard...")
+    logger.info(f"Starting dashboard on port {DASHBOARD_PORT}...")
     
     try:
         # Start the dashboard (this process blocks until the dashboard is closed)
+        env = os.environ.copy()
+        env["API_PORT"] = str(API_PORT)
+        env["DASHBOARD_PORT"] = str(DASHBOARD_PORT)
+        
         subprocess.run(
-            [PYTHON_PATH, "-m", "streamlit", "run", f"src/dashboard/app.py"],
-            check=True
+            [PYTHON_PATH, "-m", "streamlit", "run", "src/dashboard/app.py", "--server.port", str(DASHBOARD_PORT)],
+            check=True,
+            env=env
         )
         logger.info("Dashboard closed.")
         return True

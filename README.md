@@ -148,6 +148,7 @@ Our platform follows a modern microservices architecture with three main compone
    ```bash
    pip install -r requirements.txt
    ```
+   For more information on dependency management, see [Dependency Management Guide](DEPENDENCIES.md).
 
 ## 🚀 Running the Application
 
@@ -162,6 +163,8 @@ This will start:
 - The FastAPI backend on port 8000
 - The Lovable landing page on port 8002
 - The Streamlit dashboard on port 8501
+
+For custom port configuration, see [Port Configuration Guide](PORT_CONFIGURATION.md).
 
 ### Option 2: Individual Component Startup
 
@@ -197,6 +200,28 @@ Run the test suite:
 ```bash
 pytest
 ```
+
+## 🔧 Code Standards
+
+This project uses pre-commit hooks to maintain code quality and consistency. To set up:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+The pre-commit configuration enforces:
+- Trailing whitespace removal
+- Adding newline at end of files
+- Code formatting with Black
+- Linting with Flake8
+
+An EditorConfig file is also provided to help maintain consistent coding styles.
+
+## 📄 Documentation
+
+- [Port Configuration Guide](PORT_CONFIGURATION.md): Learn how to configure ports for different components
+- [Dependency Management Guide](DEPENDENCIES.md): Understanding the project's dependency structure
 
 ## 📊 MLflow Integration
 

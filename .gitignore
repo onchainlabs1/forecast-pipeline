@@ -37,6 +37,7 @@ logs/
 *.db
 *.sqlite
 *.sqlite3
+data/db/sales_forecasting.db
 
 # IDEs and editors
 .idea/
@@ -67,6 +68,11 @@ token.json
 token_result.json
 api.pid
 *.bak
+*.backup
+*.old
+src/dashboard/app.py.bak
+src/dashboard/app.py.backup
+src/dashboard/app.py.old
 
 # Data (managed by DVC, if used)
 data/*.csv
