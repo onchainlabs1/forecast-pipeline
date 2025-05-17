@@ -40,12 +40,14 @@ init_database() {
 # Initialize the database
 init_database
 
-# Use the full path to Python from Anaconda
-PYTHON_PATH="/Users/fabio/anaconda3/bin/python"
+# Use environment variables with defaults
+PYTHON_PATH=${PYTHON_PATH:-python}
+API_PORT=${API_PORT:-8000}
+DASHBOARD_PORT=${DASHBOARD_PORT:-8501}
 
 # Start the API server in the background
-echo "Starting API server..."
-$PYTHON_PATH -m src.api.main &
+echo "Starting API server on port $API_PORT..."
+API_PORT=$API_PORT $PYTHON_PATH -m src.api.main &
 API_PID=$!
 
 # Wait for API to start
@@ -53,17 +55,17 @@ echo "Waiting for API to start..."
 sleep 5
 
 # Check if API is running
-if ! curl -s http://localhost:8000/health > /dev/null; then
-    echo "Error: API failed to start. Exiting."
+if ! curl -s http://localhost:$API_PORT/health > /dev/null; then
+    echo "Error: API failed to start on port $API_PORT. Exiting."
     kill $API_PID 2>/dev/null
     exit 1
 fi
 
-echo "API server running at http://localhost:8000"
+echo "API server running at http://localhost:$API_PORT"
 
 # Start the dashboard
-echo "Starting Streamlit dashboard..."
-$PYTHON_PATH -m src.dashboard.app
+echo "Starting Streamlit dashboard on port $DASHBOARD_PORT..."
+DASHBOARD_PORT=$DASHBOARD_PORT API_PORT=$API_PORT $PYTHON_PATH -m streamlit run src/dashboard/app.py --server.port $DASHBOARD_PORT
 
 # When the dashboard is closed, stop the API server
 echo "Stopping API server..."
