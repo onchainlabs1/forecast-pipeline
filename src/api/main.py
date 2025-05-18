@@ -2249,9 +2249,8 @@ def generate_features(store_nbr, family, onpromotion, date):
         Array of features for the model
     """
     try:
-        # Determine the actual required size for features array
-        # 8 basic features + 54 stores + 32 families = 94 total features
-        required_size = 94
+        # Determine the actual required size for features array - 81 features to match the training model
+        required_size = 81
         
         # Create feature array with fixed size
         features = np.zeros(required_size)
@@ -2263,7 +2262,7 @@ def generate_features(store_nbr, family, onpromotion, date):
         if isinstance(date, str):
             date = datetime.strptime(date, "%Y-%m-%d")
         
-        # Features 1-7: Date features
+        # Features 1-7: Date features (8 features total so far)
         features[1] = date.year
         features[2] = date.month
         features[3] = date.day
@@ -2272,8 +2271,8 @@ def generate_features(store_nbr, family, onpromotion, date):
         features[6] = (date.month - 1) // 3 + 1  # Quarter
         features[7] = 1 if date.weekday() >= 5 else 0  # Is weekend
         
-        # Features 8-61: Store one-hot encoding (54 stores)
-        if 1 <= store_nbr <= 54:
+        # Features 8-47: Store one-hot encoding (40 stores instead of 54)
+        if 1 <= store_nbr <= 40:
             # Safely set the store feature - ensure we don't exceed array bounds
             store_idx = 7 + store_nbr
             if store_idx < required_size:
@@ -2281,7 +2280,7 @@ def generate_features(store_nbr, family, onpromotion, date):
             else:
                 logger.warning(f"Store index {store_idx} out of bounds for store_nbr {store_nbr}")
         
-        # Features 62-93: Family one-hot encoding (32 families)
+        # Features 48-80: Family one-hot encoding (33 features, or fewer if needed to total 81)
         families = [
             'AUTOMOTIVE', 'BABY CARE', 'BEAUTY', 'BEVERAGES', 'BOOKS', 
             'BREAD/BAKERY', 'CELEBRATION', 'CLEANING', 'DAIRY', 'DELI', 
@@ -2295,7 +2294,7 @@ def generate_features(store_nbr, family, onpromotion, date):
         try:
             family_idx = families.index(family)
             # Safely set the family feature - ensure we don't exceed array bounds
-            feature_idx = 62 + family_idx
+            feature_idx = 48 + family_idx
             if feature_idx < required_size and family_idx < len(families):
                 features[feature_idx] = 1
             else:
@@ -2314,7 +2313,7 @@ def generate_features(store_nbr, family, onpromotion, date):
         logger.error(f"Error generating features: {e}")
         logger.error(f"Detailed traceback:", exc_info=True)
         # Return a zero array of the correct size
-        return np.zeros(94)
+        return np.zeros(required_size)
 
 
 def get_feature_names():
@@ -2332,11 +2331,11 @@ def get_feature_names():
         'dayofyear', 'quarter', 'is_weekend'
     ]
     
-    # Store features (indices 8-61, 54 stores) - 54 features
-    for i in range(1, 55):  # 54 stores
+    # Store features (indices 8-47, 40 stores) - 40 features
+    for i in range(1, 41):  # 40 stores
         features.append(f'store_{i}')
     
-    # Family features (indices 62-93, 32 families) - 32 features
+    # Family features (indices 48-80, 33 families) - 33 features
     families = [
         'AUTOMOTIVE', 'BABY CARE', 'BEAUTY', 'BEVERAGES', 'BOOKS', 
         'BREAD/BAKERY', 'CELEBRATION', 'CLEANING', 'DAIRY', 'DELI', 
@@ -2347,19 +2346,19 @@ def get_feature_names():
         'SCHOOL AND OFFICE SUPPLIES', 'SEAFOOD', 'HOME APPLIANCES', 'TOYS'
     ]
     
-    for family in families:
+    for family in families[:33]:  # Limit to 33 families to match feature size
         features.append(f'family_{family}')
     
-    # Ensure we have exactly 94 features
-    if len(features) != 94:
-        logger.warning(f"Feature names list has incorrect size: {len(features)}, expected 94")
-        if len(features) < 94:
+    # Ensure we have exactly 81 features
+    if len(features) != 81:
+        logger.warning(f"Feature names list has incorrect size: {len(features)}, expected 81")
+        if len(features) < 81:
             # Add dummy features if we have too few
-            for i in range(len(features), 94):
+            for i in range(len(features), 81):
                 features.append(f'feature_{i}')
         else:
             # Truncate if we have too many
-            features = features[:94]
+            features = features[:81]
     
     return features
 
