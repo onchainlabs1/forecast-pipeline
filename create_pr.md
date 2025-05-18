@@ -1,38 +1,36 @@
-# Instructions for Creating a Pull Request on GitHub
+# Instruções para Criar um Pull Request no GitHub
 
-Follow these steps to create a PR for the `fix/api-model-errors` branch:
+Siga estes passos para criar um PR para sua branch de feature:
 
-1. Visit the GitHub repository at: https://github.com/onchainlabs1/forecast-pipeline
+1. Visite o repositório no GitHub em: https://github.com/onchainlabs1/forecast-pipeline
 
-2. Click on the "Pull requests" tab 
+2. Clique na aba "Pull requests" 
 
-3. Click the green "New pull request" button
+3. Clique no botão verde "New pull request"
 
-4. In the "compare" dropdown, select `fix/api-model-errors`
+4. No dropdown "compare", selecione sua branch de desenvolvimento
 
-5. Click "Create pull request"
+5. Clique em "Create pull request"
 
-6. Title the PR: "Fix API errors: datetime type checking, model parameters, and metrics calculation"
+6. Dê um título ao PR que descreva claramente a mudança
 
-7. In the description field, paste the contents of the `pr_description.md` file
+7. No campo de descrição, cole o conteúdo do arquivo `pr_description.md`
 
-8. Click "Create pull request"
+8. Clique em "Create pull request"
 
-## Summary of Changes
+## Resumo das Mudanças
 
-The `fix/api-model-errors` branch includes fixes for:
+Ao criar um PR, certifique-se de incluir:
 
-- Incorrect datetime type checking in `generate_features` function
-- Invalid parameters in `Prediction` model creation 
-- Non-existent fields in `ModelMetric` creation
-- Feature count mismatch between `get_feature_names` and `generate_features`
-- Improved MAPE calculation with better error handling
+- Lista de mudanças implementadas
+- Impacto nas funcionalidades existentes
+- Testes realizados para validar as mudanças
+- Quaisquer considerações importantes para o revisor
 
-## Testing
+## Testes
 
-The changes have been tested with a custom script that validates all the fixes and confirms that:
+Explique como suas mudanças foram testadas, incluindo:
 
-- Predictions can now be successfully generated and saved
-- The feature count is properly handled (81 features)
-- Metrics calculation works correctly (80.17% accuracy)
-- API endpoints no longer throw errors 
+- Testes unitários adicionados/modificados
+- Testes de integração realizados
+- Casos de uso testados manualmente 

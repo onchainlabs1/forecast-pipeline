@@ -17,12 +17,14 @@ ENV/
 
 # Unit tests
 .pytest_cache/
+.coverage
+htmlcov/
 
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
 
-# Model files (geralmente grandes)
+# Model files
 *.pkl
 *.h5
 *.joblib
@@ -37,58 +39,52 @@ logs/
 *.db
 *.sqlite
 *.sqlite3
-data/db/sales_forecasting.db
+data/db/*.db
+data/db/*.sqlite
+data/db/*.sqlite3
+
+# Sensitive files and tokens
+token.json
+token_result.json
+api.pid
+*.token
+*.key
+*.pem
+config/secrets/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*~
+*.swp
+*.swo
+.#*
+.DS_Store
 
 # IDEs and editors
 .idea/
 .vscode/
-*.swp
-*.swo
-.DS_Store
-
-# Python files
-*.so
-.Python
-parts/
-sdist/
-var/
-.installed.cfg
-*.egg
-
-# Virtual environments
-venv/
-ENV/
-.env
+*.sublime-*
 
 # Project specific
 mlruns/
-logs/
-*.log
-token.json
-token_result.json
-api.pid
-*.bak
-*.backup
-*.old
-src/dashboard/app.py.bak
-src/dashboard/app.py.backup
-src/dashboard/app.py.old
+mlflow/
+wandb/
 
-# Data (managed by DVC, if used)
+# Data (geralmente grandes ou sensíveis)
 data/*.csv
 data/*.parquet
 data/*.json
-
-# Large data files (>100MB)
 data/raw/train.csv
 data/processed/train_features.csv
 data/processed/test_features.csv
 
-# IDE configurations
-.idea/
-.vscode/
-*.swp
-*.swo
+# Arquivos temporários
+temp/
+tmp/
+check_*.py
+test_*.py
 
 # OS specific
 .DS_Store
@@ -98,13 +94,3 @@ data/processed/test_features.csv
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# Arquivos de banco de dados
-*.db
-*.sqlite3
-
-# Arquivos temporários
-temp/
-tmp/
-check_*.py
-add_test_data.py

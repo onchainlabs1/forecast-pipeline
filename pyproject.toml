@@ -2,7 +2,7 @@
 name = "store-sales-forecasting"
 version = "1.0.0"
 description = "Advanced MLOps project for store sales forecasting"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Fabio <fabio@example.com>"]
 readme = "README.md"
 license = "MIT"
 repository = "https://github.com/yourusername/store-sales-forecasting"

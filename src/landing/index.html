@@ -533,7 +533,7 @@
         <div class="nav-links" style="display: flex; align-items: center; font-weight: 500;">
             <a href="#features" class="nav-link">Features</a>
             <span style="color: var(--secondary-text); margin: 0 8px;">|</span>
-            <a href="http://localhost:8501" target="_blank" class="nav-link">Dashboard</a>
+            <a href="javascript:void(0)" onclick="window.open(dashboardUrl, '_blank')" class="nav-link">Dashboard</a>
             <span style="color: var(--secondary-text); margin: 0 8px;">|</span>
             <a href="http://localhost:8888" target="_blank" class="nav-link">MLflow</a>
             <span style="color: var(--secondary-text); margin: 0 8px;">|</span>
@@ -563,7 +563,7 @@
             A realistic AI-powered demo simulating a full-stack retail analytics product — from POS data to inventory recommendations. Built as a portfolio project to showcase real-world MLOps and forecasting capabilities.
         </p>
         
-        <a href="http://localhost:8501" target="_blank" class="cta-button animated" style="animation-delay: 0.3s; text-decoration: none;">
+        <a href="javascript:void(0)" onclick="window.open(dashboardUrl, '_blank')" class="cta-button animated" style="animation-delay: 0.3s; text-decoration: none;">
             EXPLORE DASHBOARD
         </a>
         
@@ -654,7 +654,7 @@
                 </svg>
                 VIEW ON GITHUB
             </a>
-            <a href="http://localhost:8501" target="_blank" class="cta-button" style="margin-bottom: 0.5rem; margin-left: 10px; background-color: #0a0d12; border: 1px solid #FF3366;">
+            <a href="javascript:void(0)" onclick="window.open(dashboardUrl, '_blank')" class="cta-button" style="margin-bottom: 0.5rem; margin-left: 10px; background-color: #0a0d12; border: 1px solid #FF3366;">
                 OPEN DASHBOARD
             </a>
             <p style="color: var(--secondary-text); font-size: 0.9rem; margin-top: 1rem;">
@@ -668,7 +668,7 @@
         <div class="footer-links">
             <a href="/" class="footer-link">Home</a>
             <a href="#features" class="footer-link">Features</a>
-            <a href="http://localhost:8501" target="_blank" class="footer-link">Dashboard</a>
+            <a href="javascript:void(0)" onclick="window.open(dashboardUrl, '_blank')" class="footer-link">Dashboard</a>
             <a href="http://localhost:8888" target="_blank" class="footer-link">MLflow</a>
             <a href="https://github.com/onchainlabs1/forecast-pipeline/tree/feature/lovable-landing" class="footer-link" style="display: inline-flex; align-items: center; gap: 5px;">
                 <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -723,6 +723,17 @@
     </div>
     
     <script>
+        // Configuração dinâmica das URLs do dashboard
+        function getDashboardUrl() {
+            // Se a variável DASHBOARD_PORT estiver definida como parâmetro na URL, use-a
+            const urlParams = new URLSearchParams(window.location.search);
+            let dashboardPort = urlParams.get('dashboard_port') || '8501';
+            return `http://${window.location.hostname}:${dashboardPort}`;
+        }
+
+        // Definir a URL do dashboard
+        const dashboardUrl = getDashboardUrl();
+
         // Modal functionality
         function openLoginModal() {
             document.getElementById("loginModal").style.display = "block";
@@ -763,7 +774,7 @@
                     
                     // Redirect directly to the Streamlit dashboard, passing the token and username
                     // as query parameters for automatic login
-                    const dashboardUrl = "http://localhost:8501/?token=" + encodeURIComponent(data.access_token) + "&username=" + encodeURIComponent(username);
+                    const dashboardUrl = getDashboardUrl() + "?token=" + encodeURIComponent(data.access_token) + "&username=" + encodeURIComponent(username);
                     console.log("Redirecting to dashboard with token: " + data.access_token.substring(0, 20) + "...");
                     
                     // Update UI to show success
