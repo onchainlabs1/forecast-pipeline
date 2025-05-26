@@ -45,6 +45,8 @@ sys.path.append(str(PROJECT_DIR.parent))
 from src.features.feature_store import FeatureStore
 from src.monitoring.model_monitoring import ModelMonitor
 from src.utils.mlflow_utils import setup_mlflow, log_model, log_model_params, log_model_metrics
+from src.features.enhanced_features import EnhancedFeatureGenerator
+from src.features.config_loader import FeatureConfig
 
 # Set up logging
 logging.basicConfig(
@@ -62,34 +64,60 @@ REPORTS_DIR = PROJECT_DIR.parent / "reports"
 
 class AdvancedTrainingPipeline:
     """
-    Advanced training pipeline that implements MLOps best practices:
-    - Feature Store for managing and versioning features
-    - Model monitoring for data drift and performance
-    - Integration with MLflow for experiment tracking
-    - Automated model deployment
+    Advanced training pipeline with enhanced feature generation.
     """
     
-    def __init__(self, model_name: str = "store-sales-forecaster"):
+    def __init__(
+        self,
+        model_name: str = "store-sales-forecaster",
+        data_dir: Optional[Path] = None,
+        config_dir: Optional[Path] = None
+    ):
         """
-        Initialize the training pipeline.
+        Initialize training pipeline.
         
         Parameters
         ----------
         model_name : str
-            Name of the model
+            Name of the model for MLflow tracking
+        data_dir : Path, optional
+            Directory containing data files. If not provided,
+            will use default directory relative to project root.
+        config_dir : Path, optional
+            Directory containing configuration files. If not provided,
+            will use default directory relative to project root.
         """
         self.model_name = model_name
+        
+        # Set up directories
+        if data_dir is None:
+            data_dir = Path(__file__).parent.parent / "data"
+        if config_dir is None:
+            config_dir = Path(__file__).parent.parent / "config"
+        
+        self.data_dir = Path(data_dir)
+        self.processed_data_dir = self.data_dir / "processed"
+        
+        # Initialize components
         self.feature_store = FeatureStore()
-        self.model_monitor = ModelMonitor(model_name)
-        self.experiment_id = None
-        self.mlflow_available = MLFLOW_AVAILABLE and not DISABLE_MLFLOW
+        self.feature_config = FeatureConfig(config_dir / "feature_config.yaml")
+        self.enhanced_features = EnhancedFeatureGenerator()
+        self.model_monitor = ModelMonitor(model_name=model_name)
+        
+        # Set up MLflow if available
+        try:
+            setup_mlflow()
+            self.mlflow_enabled = True
+        except Exception as e:
+            logger.warning(f"MLflow setup failed: {e}")
+            self.mlflow_enabled = False
         
         # Create necessary directories
         os.makedirs(MODELS_DIR, exist_ok=True)
         os.makedirs(REPORTS_DIR, exist_ok=True)
         
         # Initialize MLflow if available
-        if self.mlflow_available:
+        if self.mlflow_enabled:
             self.experiment_id = setup_mlflow()
             logger.info(f"MLflow experiment ID: {self.experiment_id}")
         else:
@@ -252,49 +280,221 @@ class AdvancedTrainingPipeline:
     
     def load_and_prepare_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Load data and prepare features using the Feature Store.
+        Load and prepare data with enhanced features.
         
         Returns
         -------
         Tuple[pd.DataFrame, pd.DataFrame]
-            Training data and test data with prepared features
+            Training data and validation data with prepared features
         """
         # Load processed data
-        train_path = PROCESSED_DATA_DIR / "train_features.csv"
-        test_path = PROCESSED_DATA_DIR / "test_features.csv"
+        train_path = self.processed_data_dir / "train_features.csv"
+        val_path = self.processed_data_dir / "val_features.csv"
         
-        if not train_path.exists() or not test_path.exists():
+        if not train_path.exists() or not val_path.exists():
             logger.error("Processed data files not found. Run preprocess.py first.")
             return None, None
         
         logger.info("Loading processed data files")
         train_data = pd.read_csv(train_path)
-        test_data = pd.read_csv(test_path)
+        val_data = pd.read_csv(val_path)
         
-        # Get all feature groups
+        # Convert date columns
+        date_cols = ['date']
+        for df in [train_data, val_data]:
+            for col in date_cols:
+                if col in df.columns:
+                    df[col] = pd.to_datetime(df[col])
+        
+        # Generate base features using Feature Store
+        logger.info("Generating base features")
         all_features = []
         for group_name in self.feature_store.list_feature_groups():
             group = self.feature_store.get_feature_group(group_name)
             all_features.extend(group.get("features", []))
         
-        # Generate features using Feature Store
-        logger.info("Generating features using Feature Store")
         train_features = self.feature_store.generate_features(
             data=train_data,
             feature_list=all_features,
             mode="training"
         )
         
-        test_features = self.feature_store.generate_features(
-            data=test_data,
+        val_features = self.feature_store.generate_features(
+            data=val_data,
             feature_list=all_features,
             mode="inference"
         )
         
-        logger.info(f"Prepared training data: {train_features.shape}")
-        logger.info(f"Prepared test data: {test_features.shape}")
+        # Add enhanced features if enabled
+        if self.feature_config.temporal_decomposition_enabled:
+            logger.info("Adding temporal decomposition features")
+            train_features = self.enhanced_features.add_temporal_decomposition(
+                train_features,
+                group_cols=self.feature_config.config["temporal_decomposition"].get("group_by")
+            )
+            val_features = self.enhanced_features.add_temporal_decomposition(
+                val_features,
+                group_cols=self.feature_config.config["temporal_decomposition"].get("group_by")
+            )
         
-        return train_features, test_features
+        if self.feature_config.promotion_features_enabled:
+            logger.info("Adding enhanced promotion features")
+            train_features = self.enhanced_features.add_promotion_features(train_features)
+            val_features = self.enhanced_features.add_promotion_features(val_features)
+        
+        if self.feature_config.weather_features_enabled:
+            logger.info("Adding weather features")
+            # This would require store location data
+            store_locations = self._load_store_locations()
+            if store_locations:
+                train_features = self.enhanced_features.add_weather_features(
+                    train_features,
+                    store_locations
+                )
+                val_features = self.enhanced_features.add_weather_features(
+                    val_features,
+                    store_locations
+                )
+        
+        # Perform feature selection if enabled
+        if self.feature_config.feature_selection_enabled:
+            logger.info("Performing feature selection")
+            selected_features = self._select_features(
+                train_features,
+                train_data['sales'],  # Target variable
+                **self.feature_config.get_feature_selection_params()
+            )
+            
+            # Ensure we only use features that exist in both datasets
+            common_features = list(set(selected_features) & set(train_features.columns) & set(val_features.columns))
+            logger.info(f"Using {len(common_features)} common features after selection")
+            
+            train_features = train_features[common_features]
+            val_features = val_features[common_features]
+        
+        logger.info(f"Final training data shape: {train_features.shape}")
+        logger.info(f"Final validation data shape: {val_features.shape}")
+        
+        return train_features, val_features
+    
+    def _select_features(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        method: str = "importance",
+        threshold: float = 0.01,
+        max_features: int = 100
+    ) -> List[str]:
+        """
+        Select features based on importance or correlation.
+        
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix
+        y : pd.Series
+            Target variable
+        method : str
+            Feature selection method ('importance', 'correlation', or 'variance')
+        threshold : float
+            Minimum importance/correlation to keep feature
+        max_features : int
+            Maximum number of features to keep
+            
+        Returns
+        -------
+        List[str]
+            List of selected feature names
+        """
+        # Create a copy of the data for feature selection
+        X_select = X.copy()
+        
+        # Pre-process datetime columns
+        datetime_cols = X_select.select_dtypes(include=['datetime64']).columns
+        for col in datetime_cols:
+            X_select[f"{col}_year"] = X_select[col].dt.year
+            X_select[f"{col}_month"] = X_select[col].dt.month
+            X_select[f"{col}_day"] = X_select[col].dt.day
+            X_select[f"{col}_dayofweek"] = X_select[col].dt.dayofweek
+            X_select = X_select.drop(col, axis=1)
+        
+        # Pre-process categorical columns
+        categorical_cols = X_select.select_dtypes(include=['object']).columns
+        for col in categorical_cols:
+            # Convert to categorical codes
+            X_select[col] = pd.Categorical(X_select[col]).codes
+        
+        if method == "importance":
+            # Use LightGBM for feature importance
+            train_data = lgb.Dataset(X_select, label=y)
+            params = {
+                'objective': 'regression',
+                'metric': 'rmse',
+                'verbosity': -1,
+                'num_leaves': 31,
+                'max_depth': -1
+            }
+            
+            model = lgb.train(params, train_data, num_boost_round=100)
+            importance = pd.Series(
+                model.feature_importance(),
+                index=X_select.columns
+            )
+            
+            # Select features above threshold
+            selected = importance[importance >= threshold].index.tolist()
+            
+        elif method == "correlation":
+            # Use absolute correlation with target
+            correlations = X_select.apply(lambda x: abs(x.corr(y)))
+            selected = correlations[correlations >= threshold].index.tolist()
+            
+        elif method == "variance":
+            # Use variance threshold
+            from sklearn.feature_selection import VarianceThreshold
+            
+            selector = VarianceThreshold(threshold=threshold)
+            selector.fit(X_select)
+            selected = X_select.columns[selector.get_support()].tolist()
+        
+        else:
+            raise ValueError(f"Unknown feature selection method: {method}")
+        
+        # Limit number of features if needed
+        if len(selected) > max_features:
+            if method == "importance":
+                selected = importance.nlargest(max_features).index.tolist()
+            elif method == "correlation":
+                selected = correlations.nlargest(max_features).index.tolist()
+            else:
+                selected = selected[:max_features]
+        
+        # Map back to original feature names for datetime columns
+        final_selected = []
+        for feature in selected:
+            parts = feature.split('_')
+            if len(parts) > 1 and parts[0] in [col.split('_')[0] for col in datetime_cols]:
+                # This is a derived datetime feature, keep the original datetime column
+                original_col = parts[0]
+                if original_col not in final_selected:
+                    final_selected.append(original_col)
+            else:
+                final_selected.append(feature)
+        
+        logger.info(f"Selected {len(final_selected)} features using {method} method")
+        return final_selected
+    
+    def _load_store_locations(self) -> Optional[Dict[int, Dict[str, float]]]:
+        """Load store locations from configuration."""
+        try:
+            store_locations_path = self.data_dir / "store_locations.json"
+            if store_locations_path.exists():
+                with open(store_locations_path, "r") as f:
+                    return json.load(f)
+            return None
+        except Exception as e:
+            logger.error(f"Error loading store locations: {e}")
+            return None
     
     def train_model(self, X_train: pd.DataFrame, y_train: pd.Series, 
                    X_val: Optional[pd.DataFrame] = None, 
@@ -339,7 +539,7 @@ class AdvancedTrainingPipeline:
         }
         
         # Log model parameters to MLflow
-        if self.mlflow_available:
+        if self.mlflow_enabled:
             try:
                 with mlflow.start_run(experiment_id=self.experiment_id) as run:
                     run_id = run.info.run_id
@@ -389,7 +589,7 @@ class AdvancedTrainingPipeline:
             metrics['val_mae'] = float(mean_absolute_error(y_val, val_preds))
         
         # Log metrics to MLflow
-        if self.mlflow_available:
+        if self.mlflow_enabled:
             try:
                 log_model_metrics(metrics)
                 

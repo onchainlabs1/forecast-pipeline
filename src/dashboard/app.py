@@ -2951,6 +2951,7 @@ def render_settings():
 
 # Add custom CSS
 def local_css():
+    """Add custom CSS to the dashboard."""
     css = """
     .custom-banner {
         background-color: rgba(255, 51, 102, 0.1);
@@ -2961,12 +2962,12 @@ def local_css():
         align-items: center;
         margin-bottom: 20px;
     }
-
+    
     .custom-banner i {
         color: #FF3366;
         margin-right: 10px;
     }
-
+    
     .custom-banner p {
         margin: 0;
         color: #ffffff;
@@ -2981,7 +2982,7 @@ def local_css():
         border-top-color: #FF3366;
         animation: spin 1s linear infinite;
     }
-
+    
     @keyframes spin {
         to {
             transform: rotate(360deg);

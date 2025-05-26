@@ -1,0 +1,46 @@
+# Configuration for enhanced features
+
+# Temporal decomposition settings
+temporal_decomposition:
+  enabled: true
+  features:
+    - type: "weekly"
+      period: 7
+      min_periods: 14  # 2 weeks minimum
+    - type: "monthly"
+      period: 30
+      min_periods: 60  # 2 months minimum
+    - type: "yearly"
+      period: 365
+      min_periods: 730  # 2 years minimum
+  group_by:
+    - store_nbr
+    - family
+
+# Weather features settings
+weather_features:
+  enabled: false  # Disabled by default until we have weather API integration
+  api:
+    provider: "openweathermap"  # Example provider
+    variables:
+      - temperature
+      - precipitation
+      - humidity
+    cache_duration: 86400  # 24 hours in seconds
+
+# Enhanced promotion features
+promotion_features:
+  enabled: true
+  features:
+    - days_since_promo
+    - days_to_promo
+    - store_promo_density
+    - family_promo_density
+  lookback_days: 90  # How far back to look for promotion patterns
+  
+# Feature selection settings
+feature_selection:
+  enabled: true
+  method: "importance"  # Options: importance, correlation, variance
+  threshold: 0.01  # Minimum importance/correlation to keep feature
+  max_features: 100  # Maximum number of features to keep 
