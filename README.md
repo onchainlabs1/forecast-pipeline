@@ -11,9 +11,35 @@
 
 </div>
 
-<p align="center">
-  <img src="docs/images/dashboard_main.png" alt="RetailPro AI Dashboard" width="800"/>
-</p>
+## 🎬 Project Overview Video
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=Tye1Xjep3ss" target="_blank">
+    <img src="docs/images/thumb_youtube.png" alt="Watch the project video on YouTube" width="500"/>
+  </a>
+  <br/>
+  <b>Click the image above to watch a full video walkthrough of the project on YouTube!</b>
+</div>
+
+## 🖼️ Platform Previews
+
+<div align="center">
+  <img src="docs/images/landing.png" alt="Landing Page Screenshot" width="700"/>
+  <br/>
+  <i>Landing Page: Welcome screen for users, project context, and navigation.</i>
+</div>
+
+<div align="center">
+  <img src="docs/images/dashboard_main.png" alt="Dashboard Main Screenshot" width="700"/>
+  <br/>
+  <i>Main Dashboard: Interactive sales forecasting and analytics.</i>
+</div>
+
+<div align="center">
+  <img src="docs/images/predictions.png" alt="Predictions Screenshot" width="700"/>
+  <br/>
+  <i>Predictions: Visualizing model outputs and forecast results.</i>
+</div>
 
 ## 🎯 Business Problem
 
@@ -84,35 +110,40 @@ Our platform delivers an end-to-end forecasting solution that:
 
 ## 🛠️ Technical Architecture
 
-Our platform follows a modern microservices architecture with three main components:
+Our platform follows a modern microservices architecture with four main components:
 
-<p align="center">
-  <img src="docs/images/architecture.png" alt="System Architecture" width="700"/>
-</p>
+- **Landing Page:** The entry point for users, providing project context and navigation.
+- **Streamlit Dashboard:** Interactive visualization and forecasting interface.
+- **FastAPI Backend:** Handles API requests, authentication, and model inference.
+- **ML Models & Monitoring:** Handles predictions, feature engineering, and model monitoring.
+
+Below is a high-level architecture diagram:
 
 ```
-┌───────────────────┐     ┌──────────────────┐     ┌────────────────┐
-│                   │     │                  │     │                │
-│ Streamlit         │─────▶ FastAPI          │─────▶ ML Models      │
-│ Dashboard         │     │ Backend          │     │ & Predictions  │
-│                   │     │                  │     │                │
-└───────────────────┘     └──────────────────┘     └────────────────┘
-                                   │                        │
-                                   ▼                        ▼
-                          ┌──────────────────┐     ┌────────────────┐
-                          │                  │     │                │
-                          │ Authentication   │     │ Feature        │
-                          │ & Security       │     │ Engineering    │
-                          │                  │     │                │
-                          └──────────────────┘     └────────────────┘
-                                                            │
-                                                            ▼
-                                                   ┌────────────────┐
-                                                   │                │
-                                                   │ Monitoring     │
-                                                   │ & Metrics      │
-                                                   │                │
-                                                   └────────────────┘
+┌────────────────────┐
+│   Landing Page     │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│ Streamlit Dashboard│
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│   FastAPI Backend  │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│ ML Models &        │
+│ Predictions        │
+├────────────────────┤
+│ Feature Engineering│
+├────────────────────┤
+│ Monitoring &       │
+│ Metrics            │
+└────────────────────┘
 ```
 
 ## 📝 Installation & Setup
@@ -244,6 +275,52 @@ Access the Airflow UI at: http://localhost:8080
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 📬 Contact
+## Environment Setup
 
-For questions or support, contact: support@retailproai.com
+### 1. Security Configuration
+
+For security reasons, this project uses environment variables for sensitive configurations. Before running the application, you need to set up your environment:
+
+1. Generate a secure `.env` file:
+```bash
+python scripts/generate_env.py
+```
+
+This will create a `.env` file with secure random values for:
+- `SECRET_KEY`: Used for JWT token encryption
+- `DEMO_ADMIN_PASSWORD`: Password for the admin user
+- `DEMO_USER_PASSWORD`: Password for the demo user
+- Other configuration variables
+
+### 2. Environment Variables
+
+The following environment variables are required:
+
+```bash
+# Security Configuration
+SECRET_KEY=your-secret-key-here
+
+# Demo Credentials (change in production)
+DEMO_ADMIN_PASSWORD=admin
+DEMO_USER_PASSWORD=secret
+
+# Server Ports
+PORT=8002
+API_PORT=8000
+DASHBOARD_PORT=8501
+MLFLOW_PORT=8888
+
+# Database Configuration
+DATABASE_URL=sqlite:///data/store_sales.db
+
+# MLflow Configuration
+MLFLOW_TRACKING_URI=mlruns
+
+# Token Configuration
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+⚠️ **IMPORTANT**: 
+- Never commit the `.env` file to version control
+- In production, always use strong, randomly generated passwords
+- Change the demo credentials in production
